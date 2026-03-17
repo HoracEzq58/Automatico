@@ -1,0 +1,142 @@
+Tu pc va a volar – w10						Fecha: 26/04/2025
+https://www.youtube.com/watch?v=ZucVWkH9h7A
+SCRIPT TITUS TECH
+	iwr -useb https://christitus.com/win | iex
+
+
+· Configuración / Sistema / Notificaciones y Acciones/ Desactivar todo - Palomitas también.
+· Configuración / Sistema / “Inicio/Apagado y suspensión.”
+Pantalla 15 min Suspender: Nunca – Rendimiento Modo Energía Al máximo rendimiento. Min 5.20 
+Link azul a la derecha: Configuración adicional de energía / Economizador - Luego: Elegir la acción comportamiento de los botones de inicio/apagado / link azul: Cambiar la configuración actualmente no disponible / Activar inicio rápido (recomendado.)
+· Configuración / Sistema /Experiencias compartidas/ Compartir entre dispositivos: Desactivado.
+· Configuración/Personalización/Colores/Efectos de transparencia: Desactivado.
+· Configuración/Personalización/Inicio Desactivar todo menos las aplicaciones del menú inicio. Min. 5.39.
+· Configuración/Personalización/Barra de tareas/Área de notificación/Seleccionar los iconos que aparecerán en la barra de tareas/Seleccionar Activado.
+· Configuración/Personalización/Barra de tareas/Área de notificación/Activar o desactivar iconos del sistema/desactivar todo menos los tres primeros Reloj – Volumen – Red.
+· Configuración/Personalización/Pantalla de bloqueo/Contenido destacado de Windows cambiar a imagen puntual y desactivar Mostrar datos curiosos. Y sacar a Ninguno “Elegir que aplicaciones muestran el estado…
+· Configuración/Personalización/Temas/Iconos de Escritorio Equipo y Papelera de Reciclaje.
+· Configuración/Aplicaciones/Inicio desactivar todo lo posible.
+· Configuración en buscador poner “Segundo Plano” App en segundo plano: Desactivado (todo).
+· Configuración/Juegos/Xbox game bar: Desactivado.
+Configuración/Juegos/Modo juego: Desactivado.
+· Configuración/Actualización y Seguridad/Optimización de distribución /Permitir descargas de otros equipos: Desactivado.
+· Opciones avanzadas (link azul en misma pág.) /Configuración de descarga: seleccionar “Porcentaje de ancho de banda…” Activar dos palomitas y bajar ambas al 5% Activar dos palomitas de Configuración de Carga y bajarlas a l 5% y 5gb.
+· Configuración/Sistema/Acerca de (abajo del todo) /Link azul a la derecha “Configuración avanzada del sistema” /Pestaña “Opciones avanzadas” /En cuadro Rendimiento Botón “Configuración” Efectos Visuales, tildar “Ajustar para obtener el mejor Rendimiento”. Luego en la pestaña “Opciones Avanzadas” dentro de “Configuración” Seleccionar botón “Programas”. 
+Luego en Memoria Virtual apretar Cambiar / Sacar paloma de Administrar automáticamente… Botón en Tamaño personalizado MB valor inicial memoria Ram x1.5 y valor final memoria Ram x 3 Aplicar/Aceptar. Reiniciar (después de hacer lo siguiente y reinicias una vez sola).
+· Inicio – msconfig – pestaña arranque – botón “Opciones avanzadas” tildar palomita “Número de procesadores” y seleccionar el máximo. Tildar paloma: Sin arranque de GUI. Reiniciar.
+· Explorador discos: disco C: botón derecho / propiedades / Sacar palomita a: Permitir que los archivos de esta unidad …. Indizado Aplicar en C: y subcarpetas / Continuar como administrador en Error aplicando atributos presionar Ignorar todo. Va a trabajar des indexando y puede tardar hasta un par de horas.
+· ABRIR CMD como admin y escribir lo siguiente (deshabilita hibernación ahorrando 5 gb)
+powercfg.exe /hibernate off
+Powercfg -h off
+· CMD como admin habilita el boot dual: bcdedit /set {bootmgr} displaybootmenu yes
+· Solución WiFi CMD: escribe:
+Netsh int ip reset c:\resetlog.txt
+    			 enter
+netsh winsock reset
+     enter
+ipconfig /flushdns
+     enter
+exit
+      enter     y reiniciar
+· Activa Windows 10 
+slmgr /ipk 
+slmgr /skms kms.digiboy.ir
+slmgr /ato
+
+Claves Windows 10 
+
+Windows 10 Enterprise IoT LTSC 2021: KBN8V-HFGQ4-MGXVD-347P6-PDQGT
+Windows 10 Enterprise LTSC 2019:  M7XTQ-FN8P6-TTKYV-9D4CC-J462D
+Windows 10 Home: TX9XD-98N7V-6WMQ6-BX7FG-H8Q99
+Windows 10 Home N: 3KHY7-WNT83-DGQKR-F7HPR-844BM
+Windows 10 Home Single Language: 7HNRX-D7KGG-3K4RQ-4WPJ4-YTDFH
+Windows 10 Home Country Specific: PVMJN-6DFY6-9CCP6-7BKTT-D3WVR
+Windows 10 Professional: W269N-WFGWX-YVC9B-4J6C9-T83GX
+Windows 10 Professional N: MH37W-N47XK-V7XM9-C7227-GCQG9
+Windows 10 Enterprise: NPPR9-FWDCX-D2C8J-H872K-2YT43
+Windows 10 Enterprise N: DPH2V-TTNVB-4X9Q3-TJR4H-KHJW4
+Windows 10 Education: NW6C2-QMPVW-D7KKK-3GKT6-VCFB2
+Windows 10 Education N: 2WH4N-8QGBV-H22JP-CT43Q-MDWWJ
+Windows 10 Enterprise 2015 LTSB: WNMTR-4C88C-JK8YV-HQ7T2-76DF9
+Windows 10 Enterprise 2015 LTSB N: 2F77B-TNFGY-69QQF-B8YKP-D69TJ
+
+
+
+Pasar de w10 home a w10 pro ir símbolo del sistema como admin CMD
+slmgr -xpr
+entrar a 
+Configuración / Actualización y seguridad / Activación /Cambiar ClaveProducto:
+o NRG8B-VKK3Q-CXVCJ-9G2XF-6Q84J
+o FB4WR-32NVD-4RW79-XQFWH-CYQG3
+o VK7JG-NPHTM-C97JM-9MPGT-3V66T
+poner siguiente SIN CONEXIÓN WIFI .
+· Explorador / disco C: /Propiedades / Liberar espacio en disco / Instalaciones Anteriores Windows.
+· “Mi portátil o Laptop escribe números en lugar de letras (Solución)” ytb – según modelo de laptop puede ser ….    
+1. ALT Gr + Bloq Mayus 
+2. Fn+Ins+Supr 
+3. Fn + F11 en Samsung.
+4.Bloq Desplazamiento.
+Commodore: Signo + funciona así: tocar tecla Fn al tiempo de + celeste al lado Shift derecho (esta con dos guiones).
+· Mover carpetas “Álbum de Cámara” e “Imágenes guardadas” a “Imágenes públicas”.
+· Error “Un administrador bloqueó esta aplicación…” 
+· Barra de búsqueda ejecuta como administrador REGEDIT
+Hey_local_machine/Software/Microsoft/Windows/CurrentVersion/Policies/System (clic aquí)
+· EnableLUA (clic allí)
+· Reemplazar el 1 por un 0 y clic en OK
+· Reiniciar computadora.
+Siete TRUCOS y TIPS para acelerar tu SSD | Tutorial 
+https://www.youtube.com/watch?v=HdXj4VdChnQ HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"& HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"& HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"index=5" HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"& HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5" HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"& HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"& HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"index=5"list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"& HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"& HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"index=5" HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"& HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5" HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"& HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"& HYPERLINK "https://www.youtube.com/watch?v=HdXj4VdChnQ&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=5"index=5"index=5
+  
+SSD: a. Inicio Administración de dispositivos, clic en Controladoras ATA, si dice Controladora SATA AHCI estándar, esta ok. SINO entrar a BIOS y buscar para cambiarlo.
+         b. Detección de SSD para que no Desfragmente innecesariamente. Ir a Buscador, Optimizar Unidades
+comprobar que esta app detecte tu unidad C: como unidad de estado sólido. Ver si el comando Trim está disponible en nuestro sistema: CMD escribir: fsutil behavior query DisableDeleteNotify
+si da = 0 Deshabilitado, esta ok. Si sale = 1 habilitar Trim de la siguiente manera, escribir en CMD: 
+fsutil behavior query DisableDeleteNotify 0
+Luego benchear disco con en CMD: winsat disk
+       c. Menu Servicios: deshabilitar Superfetch y Prefetch , si no figuran ir a REGEDIT y buscar 
+	HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters click derecho en Enable Prefetcher, Modificar, colocar valor 0 (tiene predeterminado 3)
+       d. Deshabilitar ClearPageFileAtShutdown ir a: HKEY_LOCAL_MACHINE\Current\ControlSet\Control\Session Manager\Memory Management
+	click en ClearPageFileAtShutdown Modificar a 0 e ir a:
+	click en LargeSystemCache modificar a 0.
+
+‘Como Recuperar Archivos Borrados | Discos Duros, USB, SD, ETC [Nuevo Método 2020]’
+https://www.youtube.com/watch?v=qurIAcNyRjM HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"& HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"list=PL6WPq8x-Iu2culvA- HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"Y0TafIq_dg5SJJTG HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"& HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"index=19" HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"& HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19" HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"& HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"& HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"index=19"list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"& HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"& HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"index=19" HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"& HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19" HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"& HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"& HYPERLINK "https://www.youtube.com/watch?v=qurIAcNyRjM&list=PL6WPq8x-Iu2culvA-Y0TafIq_dg5SJJTG&index=19"index=19"index=19
+· Ejecutar photorec.win.exe
+· Elegir la unidad a recuperar.
+· Seleccionar tipos de archivos (fat32 ejemplo)
+· Seleccionar formato de archivos (ext2 o ext3 para Linux y Other para Windows
+· Seleccionar donde buscar si en la parte libre (Free) o todo (Whole) seleccionar Whole.
+· Crear previamente una carpeta donde guardar los archivos recuperados, preferentemente NO dentro de la misma unidad.
+· Luego presionar la tecla C mayúscula para iniciar el proceso
+· Luego de terminar presionar enter sobre Quit.
+ERROR OOBEREGION
+Sigue estos pasos para intentar solucionar este problema:
+1. En esa pantalla en la que te aparece OOBEKEYBOARD, pulsa las teclas Shift+F10. Se abrirá una consola de comandos (símbolo del sistema)
+
+2. En la consola escribe estos 3 comandos, pulsando Intro después de cada uno de ellos:
+net user administrador /active:yes
+cd oobe
+msoobe.exe
+(el primer comando activa la cuenta de administrador integrada, el segundo va a la ubicación del directorio oobe en system32, y el tercero inicia la utilidad de reinicio del sistema para la configuración local msoobe.exe)
+3. Cuando hayas ejecutado el tercer comando, aparecerá una pantalla azul de Espera con puntos girando que puede tardar unos minutos (15-20 minutos)
+4. Si la máquina no se reinicia por si sola, haz un reinicio en modo forzado.
+5. En el próximo inicio, puede aparecer en la pantalla el mensaje "Nombre de usuario o contraseña no válido". Ignora este mensaje y haz clic en "Aceptar".
+6. Finalmente, accede a la pantalla de inicio de sesión estándar desde la cual puedes iniciar sesión en Windows usando la cuenta de administrador integrada que está activada.
+
+· No reconoce WiFi 
+Entrar a    w+r = ejecutar services.msc buscar servicio “Configuración automática de WLAN” e iniciar con Propiedades, Manual, Aplicar, eso habilita el renglón “Iniciar”.  Si no habilita, primero Detener, luego Iniciar. ¡¡¡Luego de eso lo reconoce!!!
+· SE FUE WiFi
+W+R = EJECUTAR
+MSINFO32
+BUSCAR INDICE DEL ADAPTADOR WIFI EJ 10
+W+R
+REGEDIT
+HEY LOCAL MACHINE / SYSTEM / CURRENT CONTROL SET / CONTROL / CLASS 
+BUSCAR CARPETA EMPIEZA 4d y termina 972 antes del primer guion
+Desplegar subcarpetas y buscar la nro. 10 y eliminarla
+Desinstalar adaptadores
+Reiniciar pc
+Instalar nuevamente adaptadores / controladores / drivers
+W 10 – AGREGAR PAQUETE IDIOMA ESPAÑOL
+Configuración / Hora e Idioma / Idioma / Agregar un idioma
+

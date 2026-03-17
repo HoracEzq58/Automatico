@@ -1,0 +1,241 @@
+OPTIMIZA TODO – TU PC VA A VOLAR W10 - W11                30/07/2025
+
+INSTALACION CHOCOLATEY
+
+PowerShell como administrador: Política de ejecución de Scripts.
+SET-EXECUTIONPOLICY -EXECUTIONPOLICY UNRESTRICTED -SCOPE LocalMachine
+SET-EXECUTIONPOLICY -EXECUTIONPOLICY UNDEFINED -SCOPE LocalMachine
+GET-EXECUTIONPOLICY -LIST
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+•	Choco upgrade chocolatey
+
+•	Instalación automática Chocolatey: abrir PowerShell y escribir lo siguiente:
+cd “c:\users\Public\Documents\Automatico”
+           enter.
+   choco install ".\InstallAppsDESKTOP-Automatico.config" -y 
+enter.
+  Problema con el checksum?  ej:
+
+   choco install googlechrome --ignore-checksums -y
+
+netplwiz       cambio de nombre de usuario
+Get-PSDrive muestra unidades de red 
+systeminfo      da la información del sistema incluida la versión de Windows) EN CMD o PowerShell:
+SFC /SCANNOW (CMD?)
+Desde x:\Sources>
+sfc /scannow /offbootdir=C:\ /offwindir=C:\Windows
+
+GOOGLE CHROME
+
+1.	Abrir Google Chrome ... configuración Extensiones quitar lo más posible.
+2.	Privacidad y Seguridad: Borrar Datos Navegación: Configuración, Privacidad y Seguridad, configuración avanzada, borrar todo. 
+3.	Coockies de terceros: Bloquear Coockies de terceros, “PERMITIR QUE LOS SITIOS RELACIONADOS VEAN TU ACTIVIDAD EN EL GRUPO” (DESACTIVAR). 
+4.	Privacidad y Seguridad:Privacidad en la Publicidad, Temas de Anuncios,Desactivar.
+Anucios sugeridos por sitios, Desactivar.Medicion de Anuncios, Descativar. 
+5.	Privacidad y Seguridad, Seguridad, habilitar la protección mejorada, Avanzado, usar DNS Seguro, Activar. 
+6.	Configuración, Rendimiento, Memoria, Ahorro de Memoria, seleccionar Maximo, Ahorro de energía, en Notebook Activar solo cuando la batería esté al 20% seleccionar y activar.  Velocidad, Precargar Paginas, Precarga ampliada.
+7.	Configuración Aspecto: Desactivar todo.
+8.	Configuración Buscador: Eliminar todos los buscadores excepto Google.com (predeterminado)
+9.	Configuración Idioma: Añadir Español Argentina y eliminar los demás, español España y español. Revisión ortográfica, activar corrector ortográfico mejorado.
+10.	Coonfiguración Sistema, "Seguir ejecutando aplicaciones en segundo plano al cerrar Google Chrome", Desactivar. 
+11.	Buscar en Google: chrome://flags, buscar GPU, y Habilitar la Rasterización.
+12.	Configuración, Red e internet, Mas opciones del adaptador, Editar
+    clic derecho sobre wifi, propiedades, buscar ipv4, seleccionar, propiedades, seleccionar botón, “Usar las siguientes direcciones DNS:”
+   a. en el preferido poner 	8 8 8 8, y 
+   b. en el alternativo 		8 8 4 4 (Google).
+13.	Desactivar protocolo ipv6.
+14.	En Windows 11: Configuración, Aplicaciones, Configuración Avanzada de Aplicaciones, Alias de Ejecución de Aplicaciones, Desactivar todo, son aplicaciones en segundo plano.
+En Windows 10: Configuración, Privacidad, Aplicaciones en Segundo Plano, desactivar todo.
+15.	Abrir con Ejecutar Gpedit.msc, configuración del equipo, plantillas administrativas, red, programador de paquetes QoS, limitar el ancho de banda reservable, habilitar y bajar de 80 a 0.
+16.	Gpedit.msc, configuración de Equipo, plantillas administrativas, componentes de Windows, Antivirus de Microsoft Defender, seleccionar “Detección”, y a la derecha seleccionar: “Especificar el porcentaje máximo del uso del CPU durante el examen”
+Clicar en “Habilitada” para poder bajarlo al 25%, aplicar, aceptar, reiniciar PC.
+17.	YouTube, configuración, reproducción y rendimiento, configuración de AV1 habilitar AUTOMÁTICA.
+18.	Ir a C:\Windows\Prefetch\ eliminar todo con del *.* 
+19.	Si da error conexión Ethernet abrir PWSH como admin y clicar 
+
+Clear-DnsClientCache
+
+Esto limpia la cache DNS para poder conectar sin errores. 
+
+
+CONFIGURACIÓN WINDOWS
+
+•	Desactivar servicios de:
+Setting service nombreservicio to Disabled
+
+Stop-Service -Name "DiagTrack" -ErrorAction SilentlyContinue
+Stop-Service -Name "SysMain" -ErrorAction SilentlyContinue
+Stop-Service -Name "bthserv" -ErrorAction SilentlyContinue -Force
+Set-Service -Name "bthserv" -StartupType Disabled
+Set-Service -Name "XblAuthManager" -StartupType Disabled
+Set-Service -Name "WpcMonSvc" -StartupType Disabled
+Set-Service -Name "DiagTrack" -StartupType Disabled
+Set-Service -Name "Fax" -StartupType Disabled
+Set-Service -Name "vmicguestinterface" -StartupType Disabled
+Set-Service -Name "vmicshutdown" -StartupType Disabled
+Set-Service -Name "vmickvpexchange" -StartupType Disabled
+Set-Service -Name "vmicheartbeat" -StartupType Disabled
+Set-Service -Name "vmictimesync" -StartupType Disabled
+Set-Service -Name "vmicrdv" -StartupType Disabled
+Set-Service -Name "vmicvmsession" -StartupType Disabled
+Set-Service -Name "MicrosoftEdgeElevationService" -StartupType Disabled
+Set-Service -Name "edgeupdate" -StartupType Disabled
+Set-Service -Name "edgeupdatem" -StartupType Disabled
+Set-Service -Name "XblGameSave" -StartupType Disabled
+Set-Service -Name "WbioSrvc" -StartupType Disabled
+Set-Service -Name "lfsvc" -StartupType Disabled
+Set-Service -Name "XboxNetApiSvc" -StartupType Disabled
+Set-Service -Name "wisvc" -StartupType Disabled
+Set-Service -Name "PhoneSvc" -StartupType Disabled
+Set-Service -Name "SysMain" -StartupType Disabled
+Set-Service -Name "TapiSrv" -StartupType Disabled
+Set-Service -Name "XboxGipSvc" -StartupType Disabled
+Set-Service -Name "XboxLiveAuthManager" -StartupType Disabled
+
+
+1.	Administración de Autenticación de Xbox Live     XblAuthManager 
+2.	Control Parental.         					WpcMonSvc
+3.	Experiencia del usuario y Telemetría.			DiagTrack
+4.	Fax									Fax
+5.	Hyper V. 
+- Interfaz de servicio invitado de Hyper-V        	vmicguestinterface
+- Servicio de Cierre de invitado de Hiper-V 		vmicshutdown
+- Servicio de Intercambio de Datos de Hiper-V  	vmickvpexchange
+- Servicio de latido de Hiper-V 				vmicheartbeat
+- Servicio de sincronización de Hora de Hiper-V 	vmictimesync
+- Serv de virt de escritorio remoto de Hiper-V 	vmicrdv
+- Servicio PowerShell Direct de Hiper-V		vmicvmsession
+
+6.	Microsoft Edge Elevation Service		MicrosoftEdgeElevationService
+7.	Microsoft Edge Update Service 		edgeupdate
+8.	Microsoft Edge Update Service 		edgeupdatem
+9.	Partida guardada en Xbox live.		XblGameSave
+10.	Servicio Biométrico de Windows.	WbioSrvc
+11.	Servicio de Compatibilidad con BlueTooth		bthserv
+12.	Servicio de Geolocalización.				lfsvc
+13.	Servicio de Red de Xbox live. 				XboxNetApiSvc
+14.	Servicio de Windows insider. 				wisvc
+15.	Servicio Telefónico. 						PhoneSvc
+16.	Sysmain. 								SysMain
+17.	Telefonía. 								TapiSrv
+18.	Xbox accesory mag service. 				XboxGipSvc
+19.	Xbox live.
+20.	Si no usan la impresora, Cola de impresión.		Spooler
+21.	Si no usan la impresora, Ext y notif de impresora  PrintNotify
+
+Otros Ajustes
+1.Programador de tareas ir a:
+.Carpeta Biblioteca del programador/Microsoft/Windows/Defrag
+.Seleccionar ScheduleDefrag
+.A la derecha clicar sobre, Finalizar, luego en Deshabilitar
+
+O ir a C:\Windows\System32\Tasks\Microsoft\Windows\Defrag\ y del ScheduledDefrag.*
+
+2.Ir a Administrador de dispositivos, 
+.Controladores ATA/ATAPI IDE, 
+.Contraladora SATA AHCI std, doble clic, Pestaña Controlador
+.Clic a Detalles del controlador, ver si esta “C:\windows\system32\Drivers\StoraHci.sys”
+.Ir a Pestaña detalles, desplegar lista de “Propiedad”
+.Seleccionar “Ruta de acceso a la instancia del dispositivo”
+.Clic derecho, copiar, y pegar en una Nota.
+.Ir a Regedit LocalMachine/System/Current control/Enum/PCI/
+.Buscar alli EXACTAMENTE la MISMA carpeta pegada en la Nota.
+.Clicar dos sub carpetas hasta llegar a la Carpeta “Device Parameters”
+.Clicar carpeta “Interrupt Management”
+.Clic a carpeta “MessageSignaledInterruptProperties”
+.Clic en lado derecho al archivo “MSISupported”
+.Doble clic a “MSISupported” y cambiar información del valor de 1 a 0
+.Aceptar, cerrar todo y reiniciar la computadora.
+-ERROR CMOS CHECKSUM BAD ir a Advanced bios Features y deshabilitar 
+  Full screen Logo Display o Full screen Logo Show y listo.
+
+
+Links Populares para Google
+
+•	Mi Afip
+https://www.afip.gob.ar/landing/default.asp
+
+•	Mi Argentina: https://id.argentina.gob.ar/ingresar/?next=/authorize/%3Fclient_id%3D613410%26response_type%3Dcode%26scope%3Dopenid%2Bprofile%2Bemail%2Boptional%26redirect_uri%3Dhttps%3A//mi.argentina.gob.ar/_oauth/
+•	Mi Anses:   
+https://servicioscorp.anses.gob.ar/clavelogon/logon.aspx?system=miansesv2
+•	Mi Pami:
+https://mi.pami.org.ar/login
+•	Mi Personal Flow
+https://idpsesion.telecom.com.ar/openam/XUI/?realm=/convergente&goto=https://idpsesion.telecom.com.ar:443/openam/oauth2/realms/root/realms/convergente/authorize?response_type%3Dcode%26client_id%3Df70a8442c0f0c7d0d72cd6ee2ac29555%26scope%3Dopenid%2520profile%26redirect_uri%3Dhttps://www.personal.com.ar/mi-personal-flow%26code_challenge%3D_TCFVTT__9rNss0Qc3oqrBeDF1xpD9DnIJtq0dLJLP4%26code_challenge_method%3DS256#login/
+•	Mi Sube:
+https://tarjetasube.sube.gob.ar/subeweb/webforms/account/views/login.aspx
+
+•	Mi Movistar
+https://idp.movistar.com.ar/convergencia/login_A.html
+
+•	Mi Claro
+https://ingreso.claro.com.ar/auth/realms/claro/protocol/openid-connect/auth?response_type=code&client_id=mi-claro-backend&scope=openid%20profile%20email%20ums_scope%20linea_scope%20email_scope%20miclaro.claro.amx/api:rw%20ums.claro.amx/user:r&state=Tk6UYRfEqtnVgXNJCVtdlUgo3tYDhSW_f6wZDvRwwMU%3D&redirect_uri=https://m-miclaro.claro.com.ar/login/oauth2/code/idp&nonce=Kcdc-pLHSBQfD0UPCRkmZkyhDvQxwiwbYnSpPpw9VaY
+
+•	Mi Facebook
+https://www.facebook.com/
+•	Mi Instagram
+https://www.instagram.com/?hl=es-la
+•	Mi Mercado Libre
+https://www.mercadolibre.com.ar/
+
+•	Mi Mercado Pago
+https://www.mercadopago.com.ar/
+
+•	Mi Pago Mis Cuentas
+https://web.pagomiscuentas.com/login
+
+•	Mi Arba
+https://sso.arba.gov.ar/Login/login?service=https%3A//www.arba.gov.ar/Gestionar/PanelAutogestion.asp
+
+•	Mi AySa
+https://oficinavirtual.web.aysa.com.ar/index.html
+
+•	Mi Dropbox
+https://www.dropbox.com/login?src=logout
+
+•	Mi Mega
+https://mega.nz/login
+
+•	Mi Edenor
+https://edenordigital.com/ingreso?utm_source=mailing&utm_medium=email&utm_campaign=Morosidad
+
+•	Mi Edesur
+https://ov.edesur.com.ar/login
+
+•	Mi Naturgy
+https://ov.naturgy.com.ar/ingreso
+
+•	Mi Netflix
+https://www.netflix.com/ar/
+
+•	Mi Zoom
+https://zoom.us/signin#/login
+
+•	Mi Banco Nacion HB
+https://hb.redlink.com.ar/bna/login.htm
+
+•	Mi Banco Ciudad HB
+https://hb.bancociudad.com.ar/login
+
+•	MiBa cuenta Gob Bs As
+https://buenosaires.gob.ar/inicio/
+
+•	M
+•	
+
+Play List Cine clásico
+https://www.youtube.com/watch?v=5OIXSkNcnxY&list=PLZE8c2A__oZqNYr_cPxrVA8hddeOdrqUn
+https://www.youtube.com/watch?v=QPpXKbg9a80&list=PLXdiBXWDzT4VsMyhzT9EYKfHE6N4cWELJ
+https://www.youtube.com/watch?v=mOTvPCJYna4&list=PLwoV0-9AZuJRU7nCqNVbZ7GFW7Qm3rpFt
+https://www.youtube.com/watch?v=apt6DuO9EM0&list=PL3CC_7F4NlRjTT1ZZi_MBliEnELYNi0Xs
+https://www.youtube.com/watch?v=FB7XWr58irk&list=PLvpyPKsMHOJtD7yTZhqSMwFY4kMwzf5an
+https://www.youtube.com/watch?v=6k3Dc0fIFuQ&list=PL3-KVMwnBhz8zGeP98h4DVXNrToxufs7B
+https://www.youtube.com/watch?v=FFPhnscR3hA&list=PL6lBA4S_u9RSPYKZxOrBz4fOrPm7hTHcW
+https://www.youtube.com/watch?v=7MdiQuFStTo&list=PLN_EFvzY3mnHkeZDjDi1h59SHVGPx6ML1
+https://www.youtube.com/watch?v=l7fgJaCxeMo&list=PL-3nYEJ3RmBHn-3pih72BRgiNI-9Df0Q3&index=2
+https://www.youtube.com/watch?v=WAHOEa0IqHQ&list=PL6WPq8x-Iu2e4GY0IB4wdXzlEVhgebkWW
+https://www.youtube.com/watch?v=u_dnzfp_yrs&list=PLMLHSWbNfEWfpk3oTGeJ4fltt7JLZ-Ym8
+https://www.youtube.com/watch?v=mZcvSPJ2xr0&list=PLRb5WLZHxhBE85FtBNd1YWt3qi9TZUx9O
+https://www.youtube.com/watch?v=G_ox34ETN4o&list=PLGOqXwGPbVaffpBoE9Z9Sbf8vy6LsutDo&index=2
+
+
