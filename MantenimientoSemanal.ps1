@@ -16,8 +16,10 @@ $logFile     = "$logDir\MantenimientoSemanal_$(Get-Date -Format 'yyyyMMdd_HHmmss
 $fechaInicio = Get-Date
 
 # --- TELEGRAM ---
-$TelegramToken  = "8680487149:AAHMf_TAPdHzhjLQke5KSSnx17YKJlAWDY8"
-$TelegramChatID = "7448521576"
+$ConfigPath = "C:\Users\Public\Documents\Automatico\config.json"
+$Config = Get-Content $ConfigPath | ConvertFrom-Json
+$TelegramToken  = $Config.TelegramToken
+$TelegramChatID = $Config.TelegramChatID
 
 # Contador global de espacio liberado (en bytes)
 $script:BytesLiberados = 0
