@@ -338,36 +338,71 @@ function Iniciar-Chocolatey {
     # Medir espacio antes de Chocolatey
     $espacioAntes = (Get-PSDrive C).Free
 
+    # Archivos temporales para capturar salida de choco
+    $tempOut = "$logDir\choco_output.tmp"
+    $tempErr = "$logDir\choco_error.tmp"
+
     try {
-        $resultado = & choco upgrade all -y --no-progress 2>&1
-        $resultado | ForEach-Object { Write-Log $_ "INFO" }
+        # --- Intento 1: choco upgrade normal ---
+        $proc = Start-Process -FilePath "choco" `
+                              -ArgumentList "upgrade all -y --no-progress" `
+                              -RedirectStandardOutput $tempOut `
+                              -RedirectStandardError  $tempErr `
+                              -NoNewWindow -PassThru -Wait
 
-        if ($LASTEXITCODE -ne 0) {
-            Write-Log "choco upgrade all -y termino con codigo $LASTEXITCODE. Reintentando con --ignore-checksums..." "WARN"
+        if (Test-Path $tempOut) {
+            $salida1 = Get-Content $tempOut
+            $salida1 | ForEach-Object { Write-Log $_ "INFO" }
+            Remove-Item $tempOut -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path $tempErr) {
+            Get-Content $tempErr | ForEach-Object { Write-Log $_ "WARN" }
+            Remove-Item $tempErr -Force -ErrorAction SilentlyContinue
+        }
 
-            $resultado2 = & choco upgrade all --ignore-checksums -y --no-progress 2>&1
-            $resultado2 | ForEach-Object { Write-Log $_ "INFO" }
+        $salida2      = $null
+        $lineaResumen = $null
 
-            if ($LASTEXITCODE -ne 0) {
-                Write-Log "choco upgrade --ignore-checksums tambien termino con errores (codigo $LASTEXITCODE). Revisa el log." "ERROR"
+        if ($proc.ExitCode -ne 0) {
+            Write-Log "choco upgrade all termino con codigo $($proc.ExitCode). Reintentando con --ignore-checksums..." "WARN"
+
+            # --- Intento 2: choco upgrade con --ignore-checksums ---
+            $proc2 = Start-Process -FilePath "choco" `
+                                   -ArgumentList "upgrade all --ignore-checksums -y --no-progress" `
+                                   -RedirectStandardOutput $tempOut `
+                                   -RedirectStandardError  $tempErr `
+                                   -NoNewWindow -PassThru -Wait
+
+            if (Test-Path $tempOut) {
+                $salida2 = Get-Content $tempOut
+                $salida2 | ForEach-Object { Write-Log $_ "INFO" }
+                Remove-Item $tempOut -Force -ErrorAction SilentlyContinue
+            }
+            if (Test-Path $tempErr) {
+                Get-Content $tempErr | ForEach-Object { Write-Log $_ "WARN" }
+                Remove-Item $tempErr -Force -ErrorAction SilentlyContinue
+            }
+
+            if ($proc2.ExitCode -ne 0) {
+                Write-Log "choco upgrade --ignore-checksums termino con errores (codigo $($proc2.ExitCode)). Revisa el log." "ERROR"
             } else {
                 Write-Log "Actualizacion con --ignore-checksums completada exitosamente." "OK"
             }
+
+            $lineaResumen = $salida2 | Where-Object { $_ -match "upgraded \d+/\d+ packages" } | Select-Object -Last 1
+
         } else {
             Write-Log "Actualizacion Chocolatey completada exitosamente." "OK"
+            $lineaResumen = $salida1 | Where-Object { $_ -match "upgraded \d+/\d+ packages" } | Select-Object -Last 1
         }
 
-    # Capturar resumen de actualizaciones
-    $script:ChocoResumen = "sin cambios"
-    $lineaResumen = $resultado | Where-Object { $_ -match "upgraded \d+/\d+ packages" } | Select-Object -Last 1
-    if (-not $lineaResumen) {
-        $lineaResumen = $resultado2 | Where-Object { $_ -match "upgraded \d+/\d+ packages" } | Select-Object -Last 1
-    }
-    if ($lineaResumen -match "upgraded (\d+)/(\d+) packages") {
-        $script:ChocoResumen = "$($Matches[1]) de $($Matches[2]) apps actualizadas"
-    }
+        # Capturar resumen de actualizaciones
+        $script:ChocoResumen = "sin cambios"
+        if ($lineaResumen -match "upgraded (\d+)/(\d+) packages") {
+            $script:ChocoResumen = "$($Matches[1]) de $($Matches[2]) apps actualizadas"
+        }
 
-        # Acumular espacio liberado por Chocolatey (diferencia de disco libre)
+        # Acumular espacio liberado por Chocolatey
         $espacioDespues = (Get-PSDrive C).Free
         $bytesChoco = $espacioDespues - $espacioAntes
         if ($bytesChoco -gt 0) { $script:BytesLiberados += $bytesChoco }
@@ -458,17 +493,26 @@ function Enviar-Resumen-Telegram {
 function Crear-LogCliente {
     param([timespan]$Duracion)
 
-    $fecha   = Get-Date -Format "dd/MM/yyyy 'a las' HH:mm"
-    $equipo  = $env:COMPUTERNAME
-    $usuario = $env:USERNAME
-    $mins    = [math]::Round($Duracion.TotalMinutes, 1)
+    $fecha  = Get-Date -Format "dd/MM/yyyy 'a las' HH:mm"
+    $equipo = $env:COMPUTERNAME
+    $mins   = [math]::Round($Duracion.TotalMinutes, 1)
 
-    # Log en Documents del usuario activo
-    $documentos     = "C:\Users\$usuario\Documents"
+    # Detectar usuario humano real (no SYSTEM ni cuenta de maquina NombrePC$)
+    $usuarioReal = (Get-CimInstance -Class Win32_ComputerSystem).UserName
+    if ($usuarioReal -and $usuarioReal -match '\\') {
+        $usuarioReal = $usuarioReal.Split('\')[1]
+    }
+    # Fallback: buscar primer usuario humano en C:\Users excluyendo cuentas del sistema
+    if (-not $usuarioReal -or $usuarioReal -match '\$$' -or $usuarioReal -eq 'SYSTEM') {
+        $usuarioReal = Get-ChildItem "C:\Users" -Directory |
+                       Where-Object { $_.Name -notin @('Public','Default','Default User','All Users') -and $_.Name -notmatch '\$$' } |
+                       Select-Object -First 1 -ExpandProperty Name
+    }
+
+    $usuario       = $usuarioReal
+    $documentos    = "C:\Users\$usuario\Documents"
+    $escritorio    = "C:\Users\$usuario\Desktop"
     $archivoCliente = "$documentos\TuPcVeloz-Ultimo-Mantenimiento.txt"
-
-    # Acceso directo en Desktop del usuario activo
-    $escritorio     = "C:\Users\$usuario\Desktop"
     $accesoDirecto  = "$escritorio\TuPcVeloz-Ultimo-Mantenimiento.lnk"
 
     $mb = [math]::Round($script:BytesLiberados / 1MB, 1)
@@ -523,8 +567,8 @@ LO QUE SE HIZO EN ESTA SESION:
         if (-not (Test-Path $escritorio)) {
             New-Item -Path $escritorio -ItemType Directory -Force | Out-Null
         }
-        $shell     = New-Object -ComObject WScript.Shell
-        $shortcut  = $shell.CreateShortcut($accesoDirecto)
+        $shell    = New-Object -ComObject WScript.Shell
+        $shortcut = $shell.CreateShortcut($accesoDirecto)
         $shortcut.TargetPath       = $archivoCliente
         $shortcut.Description      = "Ultimo mantenimiento realizado por TuPcVeloz"
         $shortcut.WorkingDirectory = $documentos
