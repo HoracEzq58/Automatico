@@ -1,8 +1,14 @@
 # ==============================================================================
 # MantenimientoSemanal.ps1
-# Script PowerShell 7 — Limpieza + Actualización Chocolatey + Wise + Telegram
+# Script PowerShell 7 — Limpieza + Actualización Chocolatey + Telegram
 # Windows 10/11 | Requiere ejecución como Administrador
 # Log: C:\Users\Public\Documents\AutoTemp\
+# ------------------------------------------------------------------------------
+# Versión : 2
+# Cambios : - Fix Bug: ExitCode de Start-Process capturado con try/catch para
+#             evitar error de assembly System.Collections.NonGeneric en .NET 9/10
+#           - Fix Bug: Get-CimInstance envuelto en try/catch para que caiga al
+#             fallback de C:\Users si CimCmdlets no carga en PS7 Core
 # ==============================================================================
 
 #Requires -Version 7.0
@@ -363,8 +369,12 @@ function Iniciar-Chocolatey {
         $salida2      = $null
         $lineaResumen = $null
 
-        if ($proc.ExitCode -ne 0) {
-            Write-Log "choco upgrade all termino con codigo $($proc.ExitCode). Reintentando con --ignore-checksums..." "WARN"
+        # Leer ExitCode con try/catch para evitar error de assembly en .NET 9/10
+        $exitCode1 = 0
+        try { $exitCode1 = $proc.ExitCode } catch { $exitCode1 = -1 }
+
+        if ($exitCode1 -ne 0) {
+            Write-Log "choco upgrade all termino con codigo $exitCode1. Reintentando con --ignore-checksums..." "WARN"
 
             # --- Intento 2: choco upgrade con --ignore-checksums ---
             $proc2 = Start-Process -FilePath "choco" `
@@ -383,8 +393,12 @@ function Iniciar-Chocolatey {
                 Remove-Item $tempErr -Force -ErrorAction SilentlyContinue
             }
 
-            if ($proc2.ExitCode -ne 0) {
-                Write-Log "choco upgrade --ignore-checksums termino con errores (codigo $($proc2.ExitCode)). Revisa el log." "ERROR"
+            # Leer ExitCode del intento 2 también con try/catch
+            $exitCode2 = 0
+            try { $exitCode2 = $proc2.ExitCode } catch { $exitCode2 = -1 }
+
+            if ($exitCode2 -ne 0) {
+                Write-Log "choco upgrade --ignore-checksums termino con errores (codigo $exitCode2). Revisa el log." "ERROR"
             } else {
                 Write-Log "Actualizacion con --ignore-checksums completada exitosamente." "OK"
             }
@@ -498,7 +512,13 @@ function Crear-LogCliente {
     $mins   = [math]::Round($Duracion.TotalMinutes, 1)
 
     # Detectar usuario humano real (no SYSTEM ni cuenta de maquina NombrePC$)
-    $usuarioReal = (Get-CimInstance -Class Win32_ComputerSystem).UserName
+    # Try/catch por si CimCmdlets no carga en PS7 Core (ej: Windows IoT LTSC)
+    $usuarioReal = $null
+    try {
+        $usuarioReal = (Get-CimInstance -Class Win32_ComputerSystem -ErrorAction Stop).UserName
+    } catch {
+        Write-Log "Get-CimInstance no disponible, usando fallback de C:\Users" "WARN"
+    }
     if ($usuarioReal -and $usuarioReal -match '\\') {
         $usuarioReal = $usuarioReal.Split('\')[1]
     }

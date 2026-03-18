@@ -1,6 +1,6 @@
 # ==============================================================================
-# Nombre Script: "4ExtraeNew-InstallAppsDesktop-Claude-v2.ps1"
-# Basado en: "4ExtraeNew-InstallAppsDesktop-Claude-v1.ps1"
+# Nombre Script: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"		version 2
+# Basado en: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"			version 1
 # Revisado y corregido por: Claude (Anthropic) - 2026-03-10
 # Actualizado por: Claude (Anthropic) - 2026-03-16
 # Requiere: PowerShell 7 | Administrador | Chocolatey instalado
@@ -474,13 +474,13 @@ Write-Log "  4ExtraeNew-InstallAppsDesktop-Claude-v2.ps1  FIN" "INFO" "Green"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Log       : $global:LogFile" "INFO" "Cyan"
 Write-Log "" "INFO" "White"
-Write-Log "SIGUIENTE PASO: Script 5 - 5WindowsUpdateClaude-v1.ps1" "INFO" "White"
+Write-Log "SIGUIENTE PASO: Script 5 - 5WindowsUpdateClaude.ps1" "INFO" "White"
 Write-Log "Iniciando en 6 segundos..." "INFO" "Yellow"
 
 Start-Sleep -Seconds 6
 
 # Llamado al Script 5
-$script5 = Join-Path $automaticoPath "5WindowsUpdateClaude-v1.ps1"
+$script5 = Join-Path $automaticoPath "5WindowsUpdateClaude.ps1"
 if (-not $LlamarScript5) {
     Write-Log "  [i] Llamado al Script 5 desactivado (LlamarScript5 = false)" "INFO" "Gray"
 } elseif (Test-Path $script5) {

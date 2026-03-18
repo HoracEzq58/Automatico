@@ -1,6 +1,6 @@
 # ==============================================================================
-# Nombre Script: "2RenameLaptop-Desktop-Claude-v2.ps1"
-# Basado en: "2RenameLaptop-Desktop-Claude-v1.ps1"
+# Nombre Script: "2RenameLaptop-Desktop-Claude.ps1" version 2
+# Basado en: "2RenameLaptop-Desktop-Claude.ps1" version 1
 # Revisado y corregido por: Claude (Anthropic) - 2026-03-10
 # Requiere: PowerShell 7 | Administrador | W10 IoT LTSC
 # ==============================================================================
@@ -323,11 +323,11 @@ Write-Log "Log        : $global:LogFile" "INFO" "Cyan"
 Write-Log "" "INFO" "White"
 
 if ($LlamarScript3) {
-    Write-Log "SIGUIENTE PASO: Script 3 - 3TuPcVolaraClaude-v3.ps1" "INFO" "White"
+    Write-Log "SIGUIENTE PASO: Script 3 - 3TuPcVolaraClaude.ps1" "INFO" "White"
     Write-Log "Iniciando en 6 segundos..." "INFO" "Yellow"
     Start-Sleep -Seconds 6
 
-    $script3 = "C:\Users\Public\Documents\Automatico\3TuPcVolaraClaude-v3.ps1"
+    $script3 = "C:\Users\Public\Documents\Automatico\3TuPcVolaraClaude.ps1"
     if (Test-Path $script3) {
         Write-Log "Ejecutando Script 3: $script3" "INFO" "Cyan"
         & $script3

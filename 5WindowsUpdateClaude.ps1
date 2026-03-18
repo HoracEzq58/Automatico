@@ -1,6 +1,6 @@
 # ==============================================================================
-# Nombre Script: "5WindowsUpdateClaude-v2.ps1"
-# Basado en: "5WindowsUpdateClaude-v1.ps1"
+# Nombre Script: "5WindowsUpdateClaude.ps1"		version 2
+# Basado en: "5WindowsUpdateClaude.ps1"			version 1
 # Revisado y corregido por: Claude (Anthropic) - 2026-03-10
 # Requiere: PowerShell 7 | Administrador | W10 IoT LTSC
 # Posicion en cadena: ULTIMO script - instala updates, activa Windows, reinicia

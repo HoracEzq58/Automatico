@@ -1,5 +1,5 @@
 # comandos git para actualizar carpeta Automatico
 cd "D:\Biblioteca-Horace\Documentos-Horacio-2\DocuHoraEzq\Automatico"
-git init
 git add .
 git commit -m "ultimos cambios"
+git push origin HEAD:main

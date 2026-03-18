@@ -1,6 +1,6 @@
 # ==============================================================================
-# Nombre Script: "3TuPcVolaraClaude-v3.ps1"
-# Basado en: "3TuPcVolaraClaude-v2.ps1"
+# Nombre Script: "3TuPcVolaraClaude.ps1" version 3
+# Basado en: "3TuPcVolaraClaude.ps1"	version 2
 # Revisado y corregido por: Claude (Anthropic) - 2026-03-10
 # Actualizado por: Claude (Anthropic) - 2026-03-16
 # Requiere: PowerShell 7 | Administrador | W10 IoT LTSC
@@ -709,7 +709,7 @@ Write-Log "" "INFO" "White"
 Write-Log "--- SECCION 19: LLAMADO AL SCRIPT 4 ---" "INFO" "Yellow"
 
 $extDir    = "C:\Users\Public\Documents\Automatico\"
-$extScript = "4ExtraeNew-InstallAppsDesktop-Claude-v2.ps1"
+$extScript = "4ExtraeNew-InstallAppsDesktop-Claude.ps1"
 $extFull   = Join-Path $extDir $extScript
 
 if (-not $LlamarScript4) {

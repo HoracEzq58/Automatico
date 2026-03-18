@@ -1,14 +1,25 @@
 # ==============================================================================
-# Nombre Script: "1Fi-2601+AutomaticoClaude-v1.ps1"
-# Basado en: "1Fi-2601_AutomaticoGrokv2.ps1"
+# Nombre Script: "1Fi-2601-AutomaticoClaude.ps1"
+# Basado en: "1Fi-2601_AutomaticoClaude-v1.ps1"
 # Revisado y modularizado por: Claude (Anthropic) - 2026-03-09
+# Actualizado por: Claude (Anthropic) - 2026-03-18
 # Requiere: PowerShell 5 (compatible con W10 IoT LTSC recien instalado)
 # Ejecutar como: Administrador
 # SET-EXECUTIONPOLICY -EXECUTIONPOLICY UNRESTRICTED -SCOPE LocalMachine
-# iwr -useb https://christitus.com/win | iex
 # ==============================================================================
 #
-# PROBLEMAS ENCONTRADOS Y CORREGIDOS vs GROKv2:
+# CAMBIOS vs v1/v2:
+#
+#  [CAMBIO] SECCION 01 - Reemplazado copiado desde pendrive por descarga desde GitHub
+#           ANTES: buscaba pendrive "Automatico K" o "Automatico SD" y copiaba carpetas
+#           AHORA: descarga ZIP del repo publico HoracEzq58/Automatico desde GitHub,
+#                  extrae las carpetas Fi-2601 y Automatico, las copia a sus destinos.
+#           MOTIVO: archivos siempre actualizados en Git, sin depender del pendrive.
+#           COMPATIBLE PS5: usa Invoke-WebRequest y System.IO.Compression, sin Git.
+#
+# ==============================================================================
+#
+# PROBLEMAS ENCONTRADOS Y CORREGIDOS vs GROKv2 (heredados de v1):
 #
 #  [BUG 1] Sec.04 - choco install usaba --version=latest literalmente
 #          "choco install pkg --version=latest" es un error en choco, 
@@ -173,7 +184,7 @@ $LlamarScript2 = $true    # $true  = llama al Script 2 al finalizar (normal)
 # ==============================================================================
 
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  1Fi-2601_AutomaticoClaude-v1.ps1  INICIO" "INFO" "Magenta"
+Write-Log "  1Fi-2601_AutomaticoClaude-v3.ps1  INICIO" "INFO" "Magenta"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Usuario  : $env:USERNAME en $env:COMPUTERNAME" "INFO" "Cyan"
 Write-Log "PS Version: $($PSVersionTable.PSVersion)" "INFO" "Cyan"
@@ -189,85 +200,58 @@ if (-not $isAdmin) {
 Write-Log "Permisos de Administrador: OK" "INFO" "Green"
 
 # ==============================================================================
-# SECCION 01 - BUSCAR PENDRIVE Y COPIAR ARCHIVOS
-# Autocontenida: busca el pendrive por nombre, copia carpetas al disco
-# Compatible PS5: usa Get-Volume con fallback a WMI
+# SECCION 01 - DESCARGAR ARCHIVOS DESDE GITHUB
+# Descarga el ZIP del repo publico, extrae Fi-2601 y Automatico,
+# los copia a sus destinos. Sin Git, sin pendrive. Compatible PS5.
 # ==============================================================================
 Write-Log "" "INFO" "White"
-Write-Log "--- SECCION 01: BUSCAR PENDRIVE Y COPIAR ARCHIVOS ---" "INFO" "Yellow"
+Write-Log "--- SECCION 01: DESCARGAR ARCHIVOS DESDE GITHUB ---" "INFO" "Yellow"
 
-$Pendrive        = $null
-$PendriveLabelRx = "Automatico K|Automatico SD"
+$GitHubUser   = "HoracEzq58"
+$GitHubRepo   = "Automatico"
+$GitHubBranch = "main"
+$ZipUrl       = "https://github.com/$GitHubUser/$GitHubRepo/archive/refs/heads/$GitHubBranch.zip"
+$ZipLocal     = "$env:TEMP\Automatico-github.zip"
+$ExtractPath  = "$env:TEMP\Automatico-github"
+$RepoFolder   = "$ExtractPath\$GitHubRepo-$GitHubBranch"  # nombre que genera GitHub al extraer
+$DestImagenes    = "C:\Users\Public\Pictures"
+$DestDocumentos  = "C:\Users\Public\Documents"
 
-# Metodo 1: Get-Volume (preferido)
+$seccion01OK = $false
+
 try {
-    $Pendrive = Get-Volume -ErrorAction Stop | Where-Object { $_.FileSystemLabel -match $PendriveLabelRx }
-    if ($Pendrive) {
-        Write-Log "  [OK] Pendrive encontrado (Get-Volume): $($Pendrive.FileSystemLabel)" "INFO" "Green"
-    }
-} catch {
-    Write-Log "  [WARN] Get-Volume fallo: $_" "WARN" "Yellow"
-}
+    # Paso 1: Descargar ZIP
+    Write-Log "  Descargando repo desde: $ZipUrl" "INFO" "Yellow"
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
 
-# Metodo 2: WMI fallback - solo DriveType 2 (removible, no fijos)
-# BUG CORREGIDO: original incluia DriveType 3 (discos fijos)
-if (-not $Pendrive) {
-    try {
-        $drives = Get-WmiObject Win32_LogicalDisk | Where-Object { $_.DriveType -eq 2 }
-        foreach ($d in $drives) {
-            if ($d.VolumeName -match $PendriveLabelRx) {
-                $Pendrive = @{ DriveLetter = $d.DeviceID.Replace(":",""); FileSystemLabel = $d.VolumeName }
-                Write-Log "  [OK] Pendrive encontrado (WMI): $($d.VolumeName)" "INFO" "Green"
-                break
-            }
-        }
-    } catch {
-        Write-Log "  [ERROR] WMI fallback fallo: $_" "ERROR" "Red"
-    }
-}
+    # Limpiar descarga anterior si existe
+    if (Test-Path $ZipLocal)    { Remove-Item $ZipLocal    -Force }
+    if (Test-Path $ExtractPath) { Remove-Item $ExtractPath -Recurse -Force }
 
-# Si no se encuentra: listar unidades y pedir seleccion manual
-if (-not $Pendrive) {
-    Write-Log "  [WARN] Pendrive no encontrado automaticamente." "WARN" "Red"
-    Write-Log "  Unidades disponibles:" "INFO" "Yellow"
-    try {
-        Get-Volume | Where-Object { $_.DriveLetter } | ForEach-Object {
-            Write-Log "    $($_.DriveLetter): '$($_.FileSystemLabel)' - $([math]::Round($_.Size/1GB,2)) GB" "INFO" "White"
-        }
-    } catch {
-        Get-WmiObject Win32_LogicalDisk | ForEach-Object {
-            Write-Log "    $($_.DeviceID) '$($_.VolumeName)' - $([math]::Round($_.Size/1GB,2)) GB" "INFO" "White"
-        }
-    }
-    Write-Log "  Ingrese letra de unidad del pendrive (ej: D) o Enter para continuar sin pendrive:" "INFO" "Cyan"
-    $manualDrive = Read-Host
-    if ($manualDrive -and $manualDrive.Length -eq 1) {
-        $Pendrive = @{ DriveLetter = $manualDrive.ToUpper(); FileSystemLabel = "Manual" }
-        Write-Log "  Usando unidad manual: $($manualDrive.ToUpper()):" "INFO" "Yellow"
-    }
-}
+    $wc = New-Object System.Net.WebClient
+    $wc.DownloadFile($ZipUrl, $ZipLocal)
+    Write-Log "  [OK] ZIP descargado: $ZipLocal ($([math]::Round((Get-Item $ZipLocal).Length/1KB,1)) KB)" "INFO" "Green"
 
-# Procesar pendrive si se encontro
-if ($Pendrive) {
-    $drive           = $Pendrive.DriveLetter
-    $Carpeta1Origen  = "$drive`:\Fi-2601"
-    $Carpeta2Origen  = "$drive`:\Automatico"
-    $DestImagenes    = "C:\Users\Public\Pictures"
-    $DestDocumentos  = "C:\Users\Public\Documents"
+    # Paso 2: Extraer ZIP - compatible PS5 via .NET
+    Write-Log "  Extrayendo ZIP..." "INFO" "Yellow"
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($ZipLocal, $ExtractPath)
+    Write-Log "  [OK] ZIP extraido en: $ExtractPath" "INFO" "Green"
 
-    Write-Log "  Unidad pendrive: $drive`:" "INFO" "Green"
+    # Paso 3: Verificar que las carpetas existen en el repo
+    $Carpeta1 = Join-Path $RepoFolder "Fi-2601"
+    $Carpeta2 = Join-Path $RepoFolder "Automatico"
 
-    # Verificar carpetas origen
-    foreach ($carpeta in @($Carpeta1Origen, $Carpeta2Origen)) {
+    foreach ($carpeta in @($Carpeta1, $Carpeta2)) {
         if (Test-Path $carpeta) {
-            Write-Log "  [OK] Carpeta encontrada: $carpeta" "INFO" "Green"
+            Write-Log "  [OK] Carpeta encontrada en repo: $carpeta" "INFO" "Green"
         } else {
-            Write-Log "  [WARN] Carpeta NO encontrada: $carpeta" "WARN" "Yellow"
+            Write-Log "  [WARN] Carpeta NO encontrada en repo: $carpeta" "WARN" "Yellow"
         }
     }
 
-    # Limpiar destinos anteriores
-    foreach ($destino in @("C:\Users\Public\Pictures\Fi-2601", "C:\Users\Public\Documents\Automatico")) {
+    # Paso 4: Limpiar destinos anteriores
+    foreach ($destino in @("$DestImagenes\Fi-2601", "$DestDocumentos\Automatico")) {
         if (Test-Path $destino) {
             try {
                 Remove-Item $destino -Recurse -Force
@@ -278,36 +262,43 @@ if ($Pendrive) {
         }
     }
 
-    # Copiar carpetas
-    if (Test-Path $Carpeta1Origen) {
+    # Paso 5: Copiar carpetas a sus destinos
+    if (Test-Path $Carpeta1) {
         try {
-            Copy-Item $Carpeta1Origen -Destination $DestImagenes -Recurse -Force
-            Write-Log "  [OK] Copiado: $Carpeta1Origen -> $DestImagenes" "INFO" "Green"
+            Copy-Item $Carpeta1 -Destination $DestImagenes -Recurse -Force
+            Write-Log "  [OK] Copiado: Fi-2601 -> $DestImagenes" "INFO" "Green"
+            $seccion01OK = $true
         } catch {
-            Write-Log "  [ERROR] Copia fallida: $Carpeta1Origen - $_" "ERROR" "Red"
+            Write-Log "  [ERROR] Copia fallida Fi-2601: $_" "ERROR" "Red"
         }
     }
-    if (Test-Path $Carpeta2Origen) {
+    if (Test-Path $Carpeta2) {
         try {
-            Copy-Item $Carpeta2Origen -Destination $DestDocumentos -Recurse -Force
-            Write-Log "  [OK] Copiado: $Carpeta2Origen -> $DestDocumentos" "INFO" "Green"
+            Copy-Item $Carpeta2 -Destination $DestDocumentos -Recurse -Force
+            Write-Log "  [OK] Copiado: Automatico -> $DestDocumentos" "INFO" "Green"
+            $seccion01OK = $true
         } catch {
-            Write-Log "  [ERROR] Copia fallida: $Carpeta2Origen - $_" "ERROR" "Red"
+            Write-Log "  [ERROR] Copia fallida Automatico: $_" "ERROR" "Red"
         }
     }
-} else {
-    Write-Log "  Continuando sin pendrive. Creando estructura minima..." "WARN" "Yellow"
+
+    # Paso 6: Limpiar temporales
+    Remove-Item $ZipLocal    -Force -ErrorAction SilentlyContinue
+    Remove-Item $ExtractPath -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Log "  [OK] Temporales de descarga eliminados." "INFO" "Gray"
+
+} catch {
+    Write-Log "  [ERROR] Fallo la descarga desde GitHub: $_" "ERROR" "Red"
+    Write-Log "  Verificar conexion a internet y que el repo sea publico." "WARN" "Yellow"
+    # Crear estructura minima para que el resto del script no falle
     $dirBase = "C:\Users\Public\Documents\Automatico"
     if (-not (Test-Path $dirBase)) {
-        try {
-            New-Item -ItemType Directory -Path $dirBase -Force | Out-Null
-            Write-Log "  [OK] Directorio creado: $dirBase" "INFO" "Green"
-        } catch {
-            Write-Log "  [ERROR] No se pudo crear: $dirBase - $_" "ERROR" "Red"
-        }
+        New-Item -ItemType Directory -Path $dirBase -Force | Out-Null
+        Write-Log "  [OK] Directorio minimo creado: $dirBase" "INFO" "Yellow"
     }
 }
 
+Write-Log "  Descarga OK: $seccion01OK" "INFO" "Cyan"
 Write-Log "--- [SECCION 01] Completada ---" "INFO" "Yellow"
 
 # ==============================================================================
@@ -576,12 +567,12 @@ Write-Log "--- [SECCION 05] Completada ---" "INFO" "Yellow"
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  1Fi-2601_AutomaticoClaude-v1.ps1  FIN" "INFO" "Green"
+Write-Log "  1Fi-2601_AutomaticoClaude-v3.ps1  FIN" "INFO" "Green"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Log guardado en : $global:LogFile" "INFO" "Cyan"
 Write-Log "Errores en      : $global:ErrorLog" "INFO" "Cyan"
 Write-Log "" "INFO" "White"
-Write-Log "SIGUIENTE PASO: Script 2 - 2RenameLaptop-Desktop-Claude-v1.ps1" "INFO" "White"
+Write-Log "SIGUIENTE PASO: Script 2 - 2RenameLaptop-Desktop-Claude.ps1" "INFO" "White"
 Write-Log "Iniciando en 6 segundos en PowerShell 7..." "INFO" "Yellow"
 
 Start-Sleep -Seconds 6
@@ -595,7 +586,7 @@ $pwsh7Paths = @(
 )
 $pwsh7 = $pwsh7Paths | Where-Object { Test-Path $_ } | Select-Object -First 1
 
-$script2 = "C:\Users\Public\Documents\Automatico\2RenameLaptop-Desktop-Claude-v2.ps1"
+$script2 = "C:\Users\Public\Documents\Automatico\2RenameLaptop-Desktop-Claude.ps1"
 
 if (-not $LlamarScript2) {
     Write-Log "  [i] Llamado al Script 2 desactivado (LlamarScript2 = false)" "INFO" "Gray"
