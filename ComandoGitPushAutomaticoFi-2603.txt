@@ -23,5 +23,5 @@ git clone https://github.com/HoracEzq58/Fi-2603.git
 git clone https://github.com/HoracEzq58/Automatico
 
 
-Invoke-WebRequest "https://raw.githubusercontent.com/HoracEzq58/Automatico/SimilCPU-Z-Old-Machine.bat" -OutFile "SimilCPU-Z-Old Machine.bat"
-Invoke-WebRequest "https://raw.githubusercontent.com/usuario/repo/main/archivo.exe" -OutFile "archivo.exe"
+Invoke-WebRequest "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/SimilCPU-Z-Old-Machine.bat" -OutFile "SimilCPU-Z-Old-Machine.bat"
+
