@@ -2,15 +2,31 @@
 # Nombre Script: "1Fi-2601-AutomaticoClaude.ps1"
 # Basado en: "1Fi-2601_AutomaticoClaude-v1.ps1"
 # Revisado y modularizado por: Claude (Anthropic) - 2026-03-09
-# Actualizado por: Claude (Anthropic) - 2026-03-18
+# Actualizado por: Claude (Anthropic) - 2026-03-19
 # Requiere: PowerShell 5 (compatible con W10 IoT LTSC recien instalado)
 # Ejecutar como: Administrador
 # SET-EXECUTIONPOLICY -EXECUTIONPOLICY UNRESTRICTED -SCOPE LocalMachine
 # ==============================================================================
 #
-# CAMBIOS vs v1/v2:
+# CAMBIOS vs version anterior (2026-03-18):
 #
-#  [CAMBIO] SECCION 01 - Reemplazado copiado desde pendrive por descarga desde GitHub
+#  [FIX 1] SECCION 01 - Logica de descarga y copia corregida (2026-03-19)
+#           ANTES: buscaba subcarpetas "Fi-2603" y "Automatico" DENTRO del repo
+#                  Automatico, pero el repo Automatico-main\ ya ES la carpeta
+#                  Automatico, y Fi-2603 es un repo separado en GitHub.
+#           AHORA: descarga DOS repos independientes:
+#                  - HoracEzq58/Automatico -> C:\Users\Public\Documents\Automatico\
+#                  - HoracEzq58/Fi-2603    -> C:\Users\Public\Pictures\Fi-2603\
+#           BONUS: loguea contenido de cada repo extraido para diagnostico.
+#
+#  [FIX 2] FUNCIONES - Nueva funcion Test-DotNetNewerVersionInstalled (2026-03-19)
+#           Detecta si ya hay una version de dotnet-X.Y-runtime mas nueva
+#           instalada (ej: dotnet-10.0-runtime v10.0.5) que causaria el error
+#           "A newer version is already installed" al intentar instalar el
+#           meta-paquete "dotnet" o "dotnet-runtime".
+#           En ese caso retorna [YA OK] en lugar de fallar 5 veces.
+#
+# ==============================================================================
 #           ANTES: buscaba pendrive "Automatico K" o "Automatico SD" y copiaba carpetas
 #           AHORA: descarga ZIP del repo publico HoracEzq58/Automatico desde GitHub,
 #                  extrae las carpetas Fi-2601 y Automatico, las copia a sus destinos.
@@ -118,6 +134,36 @@ function Test-ChocoPackageInstalled {
     }
 }
 
+function Test-DotNetNewerVersionInstalled {
+    # Para paquetes meta "dotnet" y "dotnet-runtime": detecta si ya hay una
+    # version de dotnet-X.Y-runtime igual o mayor instalada localmente,
+    # lo que causaria el error "A newer version is already installed".
+    # Retorna $true si se debe saltear la instalacion con [YA OK].
+    param([string]$PackageId)
+    try {
+        $dotnetMeta = @("dotnet", "dotnet-runtime")
+        if ($PackageId -notin $dotnetMeta) { return $false }
+
+        # Buscar dotnet-X.Y-runtime instalados (choco los lista con pipe: "nombre|version")
+        $installed = choco list --local-only --limit-output 2>$null | Where-Object { $_ -match "^dotnet-\d+\.\d+-runtime\|" }
+        if (-not $installed) { return $false }
+
+        # Extraer major version mas alta
+        $maxMajor = $installed | ForEach-Object {
+            if ($_ -match "^dotnet-(\d+)\.\d+-runtime\|") { [int]$Matches[1] }
+        } | Sort-Object -Descending | Select-Object -First 1
+
+        # dotnet 10+ ya instalado -> el meta-paquete "dotnet" (que trae 10.x) fallara
+        # porque choco lo ve como downgrade de la dependencia
+        if ($maxMajor -ge 10) {
+            return $true
+        }
+        return $false
+    } catch {
+        return $false
+    }
+}
+
 function Install-ChocoPackage {
     # Instala un paquete con reintentos. Version es opcional.
     # Si no se pasa version (o es "latest"/vacia), instala la ultima disponible
@@ -137,6 +183,14 @@ function Install-ChocoPackage {
     # Verificar si ya esta instalado
     if (Test-ChocoPackageInstalled -PackageId $PackageId) {
         Write-Log "  [YA OK] $PackageId ya instalado." "INFO" "Blue"
+        return $true
+    }
+
+    # Chequeo especial para paquetes meta dotnet/dotnet-runtime:
+    # Si ya hay una version mas nueva de dotnet-X.Y-runtime, salteamos
+    # para evitar el error "A newer version is already installed" de choco
+    if (Test-DotNetNewerVersionInstalled -PackageId $PackageId) {
+        Write-Log "  [YA OK] $PackageId salteado: ya hay una version de .NET Runtime igual o mayor instalada." "INFO" "Blue"
         return $true
     }
 
@@ -201,104 +255,136 @@ Write-Log "Permisos de Administrador: OK" "INFO" "Green"
 
 # ==============================================================================
 # SECCION 01 - DESCARGAR ARCHIVOS DESDE GITHUB
-# Descarga el ZIP del repo publico, extrae Fi-2603 y Automatico,
-# los copia a sus destinos. Sin Git, sin pendrive. Compatible PS5.
+# Descarga DOS repos publicos como ZIP y los copia a sus destinos.
+# Sin Git, sin pendrive. Compatible PS5.
+#
+# REPO 1: HoracEzq58/Automatico -> C:\Users\Public\Documents\Automatico\
+#         Contiene todos los scripts de la cadena y subcarpetas de config.
+#
+# REPO 2: HoracEzq58/Fi-2603    -> C:\Users\Public\Pictures\Fi-2603\
+#         Contiene las imagenes de fondo y recursos visuales del cliente.
+#
+# NOTA: GitHub genera el ZIP con una carpeta raiz llamada "NombreRepo-main\"
+#       Su contenido ES el destino final, no una subcarpeta dentro de el.
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "--- SECCION 01: DESCARGAR ARCHIVOS DESDE GITHUB ---" "INFO" "Yellow"
 
 $GitHubUser   = "HoracEzq58"
-$GitHubRepo   = "Automatico"
 $GitHubBranch = "main"
-$ZipUrl       = "https://github.com/$GitHubUser/$GitHubRepo/archive/refs/heads/$GitHubBranch.zip"
-$ZipLocal     = "$env:TEMP\Automatico-github.zip"
-$ExtractPath  = "$env:TEMP\Automatico-github"
-$RepoFolder   = "$ExtractPath\$GitHubRepo-$GitHubBranch"  # nombre que genera GitHub al extraer
 $DestImagenes    = "C:\Users\Public\Pictures"
 $DestDocumentos  = "C:\Users\Public\Documents"
 
+# Habilitar TLS 1.2 para descargas (requerido por GitHub en W10 IoT recien instalado)
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+
 $seccion01OK = $false
 
-try {
-    # Paso 1: Descargar ZIP
-    Write-Log "  Descargando repo desde: $ZipUrl" "INFO" "Yellow"
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+# ------------------------------------------------------------------------------
+# Funcion interna: descarga un repo ZIP de GitHub, extrae y copia al destino
+# NombreRepo : nombre del repo en GitHub (ej: "Automatico")
+# DestPadre  : carpeta padre donde se crea la subcarpeta (ej: Documents -> Documents\Automatico\)
+# ------------------------------------------------------------------------------
+function Invoke-DescargarRepo {
+    param(
+        [string]$NombreRepo,
+        [string]$DestPadre
+    )
 
-    # Limpiar descarga anterior si existe
-    if (Test-Path $ZipLocal)    { Remove-Item $ZipLocal    -Force }
-    if (Test-Path $ExtractPath) { Remove-Item $ExtractPath -Recurse -Force }
+    $ZipUrl      = "https://github.com/$GitHubUser/$NombreRepo/archive/refs/heads/$GitHubBranch.zip"
+    $ZipLocal    = "$env:TEMP\$NombreRepo-github.zip"
+    $ExtractPath = "$env:TEMP\$NombreRepo-github"
+    $RepoFolder  = "$ExtractPath\$NombreRepo-$GitHubBranch"   # nombre que genera GitHub
+    $Destino     = "$DestPadre\$NombreRepo"
 
-    $wc = New-Object System.Net.WebClient
-    $wc.DownloadFile($ZipUrl, $ZipLocal)
-    Write-Log "  [OK] ZIP descargado: $ZipLocal ($([math]::Round((Get-Item $ZipLocal).Length/1KB,1)) KB)" "INFO" "Green"
+    Write-Log "  [REPO] $NombreRepo -> $Destino" "INFO" "Yellow"
 
-    # Paso 2: Extraer ZIP - compatible PS5 via .NET
-    Write-Log "  Extrayendo ZIP..." "INFO" "Yellow"
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($ZipLocal, $ExtractPath)
-    Write-Log "  [OK] ZIP extraido en: $ExtractPath" "INFO" "Green"
+    try {
+        # Limpiar temporales anteriores
+        if (Test-Path $ZipLocal)    { Remove-Item $ZipLocal    -Force }
+        if (Test-Path $ExtractPath) { Remove-Item $ExtractPath -Recurse -Force }
 
-    # Paso 3: Verificar que las carpetas existen en el repo
-    $Carpeta1 = Join-Path $RepoFolder "Fi-2603"
-    $Carpeta2 = Join-Path $RepoFolder "Automatico"
+        # Descargar ZIP
+        Write-Log "    Descargando: $ZipUrl" "INFO" "Yellow"
+        $wc = New-Object System.Net.WebClient
+        $wc.DownloadFile($ZipUrl, $ZipLocal)
+        Write-Log "    [OK] ZIP descargado ($([math]::Round((Get-Item $ZipLocal).Length/1KB,1)) KB)" "INFO" "Green"
 
-    foreach ($carpeta in @($Carpeta1, $Carpeta2)) {
-        if (Test-Path $carpeta) {
-            Write-Log "  [OK] Carpeta encontrada en repo: $carpeta" "INFO" "Green"
-        } else {
-            Write-Log "  [WARN] Carpeta NO encontrada en repo: $carpeta" "WARN" "Yellow"
-        }
-    }
+        # Extraer ZIP
+        Write-Log "    Extrayendo..." "INFO" "Yellow"
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($ZipLocal, $ExtractPath)
+        Write-Log "    [OK] ZIP extraido." "INFO" "Green"
 
-    # Paso 4: Limpiar destinos anteriores
-    foreach ($destino in @("$DestImagenes\Fi-2603", "$DestDocumentos\Automatico")) {
-        if (Test-Path $destino) {
-            try {
-                Remove-Item $destino -Recurse -Force
-                Write-Log "  [OK] Limpiado destino anterior: $destino" "INFO" "Yellow"
-            } catch {
-                Write-Log "  [ERROR] No se pudo limpiar: $destino - $_" "ERROR" "Red"
+        # Verificar carpeta generada por GitHub
+        if (-not (Test-Path $RepoFolder)) {
+            Write-Log "    [ERROR] Carpeta esperada no encontrada: $RepoFolder" "ERROR" "Red"
+            Write-Log "    Contenido de $ExtractPath :" "WARN" "Yellow"
+            Get-ChildItem $ExtractPath -ErrorAction SilentlyContinue | ForEach-Object {
+                Write-Log "      $($_.Name)" "WARN" "Yellow"
             }
+            return $false
         }
-    }
 
-    # Paso 5: Copiar carpetas a sus destinos
-    if (Test-Path $Carpeta1) {
-        try {
-            Copy-Item $Carpeta1 -Destination $DestImagenes -Recurse -Force
-            Write-Log "  [OK] Copiado: Fi-2603 -> $DestImagenes" "INFO" "Green"
-            $seccion01OK = $true
-        } catch {
-            Write-Log "  [ERROR] Copia fallida Fi-2603: $_" "ERROR" "Red"
+        # Loguear contenido del repo para diagnostico
+        Write-Log "    Contenido del repo:" "INFO" "Cyan"
+        Get-ChildItem $RepoFolder | ForEach-Object {
+            $tipo = if ($_.PSIsContainer) { "[DIR] " } else { "[FILE]" }
+            Write-Log "      $tipo $($_.Name)" "INFO" "Cyan"
         }
-    }
-    if (Test-Path $Carpeta2) {
-        try {
-            Copy-Item $Carpeta2 -Destination $DestDocumentos -Recurse -Force
-            Write-Log "  [OK] Copiado: Automatico -> $DestDocumentos" "INFO" "Green"
-            $seccion01OK = $true
-        } catch {
-            Write-Log "  [ERROR] Copia fallida Automatico: $_" "ERROR" "Red"
+
+        # Limpiar destino anterior si existe
+        if (Test-Path $Destino) {
+            Remove-Item $Destino -Recurse -Force
+            Write-Log "    [OK] Destino anterior limpiado: $Destino" "INFO" "Yellow"
         }
+
+        # Copiar repo al destino
+        # Copy-Item con -Destination crea $Destino como copia de $RepoFolder
+        Copy-Item $RepoFolder -Destination $Destino -Recurse -Force
+        Write-Log "    [OK] Copiado a: $Destino" "INFO" "Green"
+
+        return $true
+
+    } catch {
+        Write-Log "    [ERROR] Fallo descarga/copia de $NombreRepo : $_" "ERROR" "Red"
+        return $false
+    } finally {
+        # Limpiar temporales siempre, haya fallado o no
+        Remove-Item $ZipLocal    -Force -ErrorAction SilentlyContinue
+        Remove-Item $ExtractPath -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Log "    [OK] Temporales eliminados." "INFO" "Gray"
     }
+}
 
-    # Paso 6: Limpiar temporales
-    Remove-Item $ZipLocal    -Force -ErrorAction SilentlyContinue
-    Remove-Item $ExtractPath -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Log "  [OK] Temporales de descarga eliminados." "INFO" "Gray"
+# ------------------------------------------------------------------------------
+# REPO 1: Automatico -> C:\Users\Public\Documents\Automatico\
+# ------------------------------------------------------------------------------
+Write-Log "" "INFO" "White"
+Write-Log "  [1/2] Repo Automatico (scripts)" "INFO" "Magenta"
+$ok1 = Invoke-DescargarRepo -NombreRepo "Automatico" -DestPadre $DestDocumentos
 
-} catch {
-    Write-Log "  [ERROR] Fallo la descarga desde GitHub: $_" "ERROR" "Red"
-    Write-Log "  Verificar conexion a internet y que el repo sea publico." "WARN" "Yellow"
-    # Crear estructura minima para que el resto del script no falle
-    $dirBase = "C:\Users\Public\Documents\Automatico"
+# Crear estructura minima si fallo, para que el resto del script no reviente
+if (-not $ok1) {
+    Write-Log "  [WARN] Repo Automatico fallo. Creando directorio minimo." "WARN" "Yellow"
+    $dirBase = "$DestDocumentos\Automatico"
     if (-not (Test-Path $dirBase)) {
         New-Item -ItemType Directory -Path $dirBase -Force | Out-Null
         Write-Log "  [OK] Directorio minimo creado: $dirBase" "INFO" "Yellow"
     }
 }
 
-Write-Log "  Descarga OK: $seccion01OK" "INFO" "Cyan"
+# ------------------------------------------------------------------------------
+# REPO 2: Fi-2603 -> C:\Users\Public\Pictures\Fi-2603\
+# ------------------------------------------------------------------------------
+Write-Log "" "INFO" "White"
+Write-Log "  [2/2] Repo Fi-2603 (imagenes cliente)" "INFO" "Magenta"
+$ok2 = Invoke-DescargarRepo -NombreRepo "Fi-2603" -DestPadre $DestImagenes
+
+$seccion01OK = $ok1  # El critico es Automatico; Fi-2603 es complementario
+
+Write-Log "" "INFO" "White"
+Write-Log "  Resultado -> Automatico: $(if($ok1){'OK'}else{'FALLO'}) | Fi-2603: $(if($ok2){'OK'}else{'FALLO'})" "INFO" "Cyan"
 Write-Log "--- [SECCION 01] Completada ---" "INFO" "Yellow"
 
 # ==============================================================================

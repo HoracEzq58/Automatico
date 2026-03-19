@@ -4,7 +4,15 @@ git add .
 git commit -m "ultimos cambios"
 git push origin HEAD:main
 
-# Fi-2603
+# Fi-2603 - primer Commit
+cd "D:\Biblioteca-Horace\Imagenes-Horacio\Fi-2603"
+git init
+git add .
+git commit -m "Primer commit"
+git remote add origin https://github.com/HoracEzq58/Fi-2603.git
+git push origin HEAD:main
+
+# # Fi-2603 actualizar
 cd "D:\Biblioteca-Horace\Imagenes-Horacio\Fi-2603"
 git add .
 git commit -m "Ultimos cambios"
