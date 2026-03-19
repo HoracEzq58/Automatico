@@ -201,7 +201,7 @@ Write-Log "Permisos de Administrador: OK" "INFO" "Green"
 
 # ==============================================================================
 # SECCION 01 - DESCARGAR ARCHIVOS DESDE GITHUB
-# Descarga el ZIP del repo publico, extrae Fi-2601 y Automatico,
+# Descarga el ZIP del repo publico, extrae Fi-2603 y Automatico,
 # los copia a sus destinos. Sin Git, sin pendrive. Compatible PS5.
 # ==============================================================================
 Write-Log "" "INFO" "White"
@@ -239,7 +239,7 @@ try {
     Write-Log "  [OK] ZIP extraido en: $ExtractPath" "INFO" "Green"
 
     # Paso 3: Verificar que las carpetas existen en el repo
-    $Carpeta1 = Join-Path $RepoFolder "Fi-2601"
+    $Carpeta1 = Join-Path $RepoFolder "Fi-2603"
     $Carpeta2 = Join-Path $RepoFolder "Automatico"
 
     foreach ($carpeta in @($Carpeta1, $Carpeta2)) {
@@ -251,7 +251,7 @@ try {
     }
 
     # Paso 4: Limpiar destinos anteriores
-    foreach ($destino in @("$DestImagenes\Fi-2601", "$DestDocumentos\Automatico")) {
+    foreach ($destino in @("$DestImagenes\Fi-2603", "$DestDocumentos\Automatico")) {
         if (Test-Path $destino) {
             try {
                 Remove-Item $destino -Recurse -Force
@@ -266,10 +266,10 @@ try {
     if (Test-Path $Carpeta1) {
         try {
             Copy-Item $Carpeta1 -Destination $DestImagenes -Recurse -Force
-            Write-Log "  [OK] Copiado: Fi-2601 -> $DestImagenes" "INFO" "Green"
+            Write-Log "  [OK] Copiado: Fi-2603 -> $DestImagenes" "INFO" "Green"
             $seccion01OK = $true
         } catch {
-            Write-Log "  [ERROR] Copia fallida Fi-2601: $_" "ERROR" "Red"
+            Write-Log "  [ERROR] Copia fallida Fi-2603: $_" "ERROR" "Red"
         }
     }
     if (Test-Path $Carpeta2) {
