@@ -3,3 +3,9 @@ cd "D:\Biblioteca-Horace\Documentos-Horacio-2\DocuHoraEzq\Automatico"
 git add .
 git commit -m "ultimos cambios"
 git push origin HEAD:main
+
+# Fi-2603
+cd "D:\Biblioteca-Horace\Imagenes-Horacio\Fi-2603"
+git add .
+git commit -m "Ultimos cambios"
+git push origin HEAD:main

@@ -184,7 +184,7 @@ $LlamarScript2 = $true    # $true  = llama al Script 2 al finalizar (normal)
 # ==============================================================================
 
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  1Fi-2601_AutomaticoClaude-v3.ps1  INICIO" "INFO" "Magenta"
+Write-Log "  1Fi-2601_AutomaticoClaude.ps1  INICIO" "INFO" "Magenta"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Usuario  : $env:USERNAME en $env:COMPUTERNAME" "INFO" "Cyan"
 Write-Log "PS Version: $($PSVersionTable.PSVersion)" "INFO" "Cyan"
@@ -567,7 +567,7 @@ Write-Log "--- [SECCION 05] Completada ---" "INFO" "Yellow"
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  1Fi-2601_AutomaticoClaude-v3.ps1  FIN" "INFO" "Green"
+Write-Log "  1Fi-2601_AutomaticoClaude.ps1  FIN" "INFO" "Green"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Log guardado en : $global:LogFile" "INFO" "Cyan"
 Write-Log "Errores en      : $global:ErrorLog" "INFO" "Cyan"
