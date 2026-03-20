@@ -24,9 +24,10 @@
 #          mezclados, confuso para diagnostico.
 #          CORRECCION: Renombrados coherentemente como SECCION A y SECCION B.
 #
-# ==============================================================================
+#  Version 3 se agregaron mas tipos de chasis para LAPTOP- en seccion 3 el 19/03/2026  
+# ===================================================================================
 
-# ==============================================================================
+# ===================================================================================
 # CONFIGURACION GLOBAL Y LOGGING
 # ==============================================================================
 
@@ -108,7 +109,7 @@ if (-not $isAdmin) {
 Write-Log "Administrador: OK" "INFO" "Green"
 
 # ==============================================================================
-# SECCION A - INSTALAR OFFICE LTSC 2021
+# SECCION 1 - INSTALAR OFFICE LTSC 2021
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "--- SECCION 1: INSTALAR OFFICE LTSC 2021 ---" "INFO" "Yellow"
@@ -263,10 +264,11 @@ if ($currentName -in $validFormats) {
         # Get-CimInstance no tiene el problema de SID (usa DCOM local, no WMI remoto)
         # pero para mayor seguridad usamos el registro directamente
         $chassis     = Get-CimInstance -ClassName Win32_SystemEnclosure -ErrorAction Stop
-        $chassisType = $chassis.ChassisTypes[0]
-        $laptopTypes = @(8, 9, 10, 14, 30, 31, 32)
-        $chassisPrefix = if ($chassisType -in $laptopTypes) { "LAPTOP-" } else { "DESKTOP-" }
-        Write-Log "  Tipo de chasis: $chassisType -> $chassisPrefix" "INFO" "Cyan"
+        $chassisTypes = $chassis.ChassisTypes
+		$laptopTypes  = @(8, 9, 10, 11, 12, 14, 18, 21, 30, 31, 32)	
+		$esLaptop     = $chassisTypes | Where-Object { $_ -in $laptopTypes }
+		$chassisPrefix = if ($esLaptop) { "LAPTOP-" } else { "DESKTOP-" }
+		Write-Log "  Tipos de chasis detectados: $($chassisTypes -join ', ') -> $chassisPrefix" "INFO" "Cyan"
     } catch {
         Write-Log "  [WARN] No se pudo detectar chasis: $_. Usando DESKTOP-." "WARN" "Yellow"
     }

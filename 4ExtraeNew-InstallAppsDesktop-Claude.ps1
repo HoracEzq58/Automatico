@@ -1,8 +1,9 @@
 # ==============================================================================
-# Nombre Script: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"		version 2
-# Basado en: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"			version 1
+# Nombre Script: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"		version 3
+# Basado en: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"			version 2
 # Revisado y corregido por: Claude (Anthropic) - 2026-03-10
 # Actualizado por: Claude (Anthropic) - 2026-03-16
+# Actualizado por: Claude (Anthropic) - 2026-03-19
 # Requiere: PowerShell 7 | Administrador | Chocolatey instalado
 # Flujo: 1)Instalar -> 1.5)ConfigEverything -> 2)Verificar faltantes ->
 #        3)Limpiar sobrantes -> 3.5)Actualizar -> 4)Renombrar SSD -> llamar Script 5
@@ -39,6 +40,23 @@
 #             - Configura hide_empty_search_results=1 en Everything.ini
 #             - Clave confirmada en instalacion real (2026-03-16)
 #             - Pantalla en blanco al abrir Everything hasta que el usuario escriba
+#
+# CAMBIOS 2026-03-19 (v3):
+#
+#  [PASO 4] Diccionario de marcas SSD (brandMap) reemplaza limpieza generica:
+#           - Marcas conocidas mapean a nombre limpio sin importar lo que traiga
+#             el FriendlyName del disco (que puede incluir la capacidad en distintos
+#             formatos: "240G", "240GB", "240Gb", etc.)
+#           - Resuelve redundancia "SSD HS--WAVE(S) 240G 240gb" -> "SSD Hicksemi 240gb"
+#           - Para marcas no mapeadas: fallback con limpieza generica mejorada
+#             que ahora cubre el patron \d+G\b (sin la B al final)
+#           - Facil de extender: agregar una linea al array $brandMap
+#
+#  [PASO 3.5] rustdesk.install excluido del choco upgrade all:
+#           - El servicio RustDesk corre en background durante el upgrade
+#           - El installer MSI puede fallar silenciosamente dejando el ejecutable
+#             sin icono/acceso directo aunque choco lo marque como instalado
+#           - Solucion: --except="rustdesk.install" en el upgrade masivo
 #
 # ==============================================================================
 
@@ -151,7 +169,7 @@ $LlamarScript5 = $true    # $true  = llama al Script 5 al finalizar (normal)
 # ==============================================================================
 
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  4ExtraeNew-InstallAppsDesktop-Claude-v2.ps1  INICIO" "INFO" "Magenta"
+Write-Log "  4ExtraeNew-InstallAppsDesktop-Claude-v3.ps1  INICIO" "INFO" "Magenta"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Usuario   : $env:USERNAME en $env:COMPUTERNAME" "INFO" "Cyan"
 Write-Log "PS Version: $($PSVersionTable.PSVersion)" "INFO" "Cyan"
@@ -411,8 +429,12 @@ Write-Log "--- [PASO 3] Completado ---" "INFO" "Yellow"
 Write-Log "" "INFO" "White"
 Write-Log "--- PASO 3.5: ACTUALIZAR TODOS LOS PAQUETES ---" "INFO" "Yellow"
 try {
-    choco upgrade all --limit-output --no-progress -y
-    Write-Log "  [OK] Actualizacion completada." "INFO" "Green"
+    # rustdesk.install excluido del upgrade masivo: su servicio corre en background
+    # y puede causar que el installer MSI falle silenciosamente durante el upgrade,
+    # dejando el ejecutable sin icono/acceso directo aunque choco lo marque como OK.
+    choco upgrade all --except="rustdesk.install" --limit-output --no-progress -y
+    Write-Log "  [OK] Actualizacion completada (rustdesk.install excluido del upgrade masivo)." "INFO" "Green"
+    Write-Log "  [i] RustDesk se actualiza manualmente o via reinstalacion en Paso 2." "INFO" "Gray"
 } catch {
     Write-Log "  [WARN] Error durante actualizacion: $_" "WARN" "Yellow"
 }
@@ -432,9 +454,46 @@ try {
     if ($null -eq $disk) {
         Write-Log "  [WARN] No se pudo detectar el disco fisico de C:. Saltando renombrado." "WARN" "Yellow"
     } else {
-        # Limpiar nombre de marca
-        $brand = $disk.FriendlyName
-        $brand = ($brand -replace '\d+GB', '' -replace 'SSD', '' -replace '\s+', ' ').Trim()
+        # Diccionario de marcas conocidas -> nombre limpio (sin capacidad del modelo)
+        # Evita redundancia cuando el FriendlyName incluye la capacidad (ej: "HS--WAVE(S) 240G")
+        $brandMap = @(
+            @{ Pattern = 'Hicksemi|HS-SSD-WAVE|HS--WAVE|HSWAVE|HS-WAVE'; Name = 'Hicksemi'  }
+            @{ Pattern = 'Kingston|KINGSTON|SA400';           Name = 'Kingston'  }
+            @{ Pattern = 'Samsung|SAMSUNG';                   Name = 'Samsung'   }
+            @{ Pattern = 'WD|Western.?Digital';               Name = 'WD'        }
+            @{ Pattern = 'Crucial|CT\d+';                     Name = 'Crucial'   }
+            @{ Pattern = 'SanDisk|SANDISK';                   Name = 'SanDisk'   }
+            @{ Pattern = 'Patriot';                           Name = 'Patriot'   }
+            @{ Pattern = 'PNY';                               Name = 'PNY'       }
+            @{ Pattern = 'A-?DATA|ADATA';                     Name = 'ADATA'     }
+            @{ Pattern = 'Toshiba|TOSHIBA';                   Name = 'Toshiba'   }
+            @{ Pattern = 'Intel';                             Name = 'Intel'     }
+            @{ Pattern = 'Seagate';                           Name = 'Seagate'   }
+            @{ Pattern = 'Lexar';                             Name = 'Lexar'     }
+            @{ Pattern = 'Silicon.?Power|SP\d+';              Name = 'SiliconPwr'}
+            @{ Pattern = 'Team.?Group|T-?Force';              Name = 'TeamGroup' }
+        )
+
+        $rawBrand    = $disk.FriendlyName
+        $matchedName = $null
+        foreach ($entry in $brandMap) {
+            if ($rawBrand -match $entry.Pattern) {
+                $matchedName = $entry.Name
+                break
+            }
+        }
+
+        if ($matchedName) {
+            # Marca conocida: usar nombre limpio del diccionario
+            $brand = $matchedName
+            Write-Log "  Marca identificada: '$rawBrand' -> '$brand'" "INFO" "Cyan"
+        } else {
+            # Marca desconocida: limpieza generica
+            # -replace '\d+\s*G\b' cubre "240G", "480G", etc. (sin la B)
+            # -replace '\d+GB'     cubre "240GB", "480GB", etc.
+            $brand = ($rawBrand -replace '\d+\s*G\b', '' -replace '\d+GB', '' -replace 'SSD', '' -replace '\s+', ' ').Trim()
+            Write-Log "  Marca no mapeada, limpieza generica: '$rawBrand' -> '$brand'" "WARN" "Yellow"
+        }
 
         # Mapear capacidad real a nominal estandar
         $rawGB      = $disk.Size / 1GB
@@ -470,7 +529,7 @@ Write-Log "--- [PASO 4] Completado ---" "INFO" "Yellow"
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  4ExtraeNew-InstallAppsDesktop-Claude-v2.ps1  FIN" "INFO" "Green"
+Write-Log "  4ExtraeNew-InstallAppsDesktop-Claude-v3.ps1  FIN" "INFO" "Green"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Log       : $global:LogFile" "INFO" "Cyan"
 Write-Log "" "INFO" "White"

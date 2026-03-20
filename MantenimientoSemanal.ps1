@@ -4,10 +4,19 @@
 # Windows 10/11 | Requiere ejecución como Administrador
 # Log: C:\Users\Public\Documents\AutoTemp\
 # ------------------------------------------------------------------------------
+# Versión : 3
+# Cambios : - Nueva función Gestionar-Estadisticas: acumulador anual de bytes
+#             liberados en estadisticas-anuales.json. Resetea automáticamente
+#             al completar 52 semanas.
+#           - Enviar-Resumen-Telegram: agrega bloque de acumulado anual
+#             (semana N de 52, total acumulado, equivalencias fotos/canciones).
+#           - Crear-LogCliente: agrega sección de acumulado anual al .txt
+#             del Escritorio del cliente (argumento de venta de suscripción).
+# ------------------------------------------------------------------------------
 # Versión : 2
 # Cambios : - Fix Bug: ExitCode de Start-Process capturado con try/catch para
 #             evitar error de assembly System.Collections.NonGeneric en .NET 9/10
-#           - Fix Bug: Get-CimInstance envuelto en try/catch para que caiga al
+#           - Fix Bug: Get-CimInstance envuelto en try/catch para que caida al
 #             fallback de C:\Users si CimCmdlets no carga en PS7 Core
 # ==============================================================================
 
@@ -30,6 +39,9 @@ $TelegramChatID = $Config.TelegramChatID
 # Contador global de espacio liberado (en bytes)
 $script:BytesLiberados = 0
 $script:ChocoResumen   = "sin cambios"
+
+# Ruta del JSON de estadísticas anuales acumuladas
+$estadisticasFile = "$logDir\estadisticas-anuales.json"
 
 # Crear directorio de log si no existe
 if (-not (Test-Path $logDir)) {
@@ -230,6 +242,71 @@ function Eliminar-TareasInvasivas {
     } else {
         Write-Log "Tareas invasivas: $eliminadas eliminadas, $errores con error." "OK"
     }
+}
+
+# ------------------------------------------------------------------------------
+# FUNCIÓN: ESTADÍSTICAS ANUALES ACUMULADAS
+# ------------------------------------------------------------------------------
+
+function Gestionar-Estadisticas {
+    param([long]$BytesEstaSemana)
+
+    $hoy          = Get-Date -Format "yyyy-MM-dd"
+    $semanas_max  = 52
+
+    # Leer JSON existente o crear estructura nueva
+    if (Test-Path $estadisticasFile) {
+        try {
+            $stats = Get-Content $estadisticasFile -Raw | ConvertFrom-Json
+            Write-Log "Estadisticas anuales cargadas ($($stats.semanas_registradas) semanas previas)." "INFO"
+        } catch {
+            Write-Log "No se pudo leer estadisticas-anuales.json, se reinicia el ciclo: $_" "WARN"
+            $stats = $null
+        }
+    } else {
+        $stats = $null
+    }
+
+    if (-not $stats) {
+        $stats = [PSCustomObject]@{
+            inicio_ciclo       = $hoy
+            semanas_registradas = 0
+            bytes_acumulados   = [long]0
+            ultima_ejecucion   = $hoy
+        }
+        Write-Log "Nuevo ciclo anual iniciado el $hoy." "OK"
+    }
+
+    # Sumar bytes de esta semana
+    $stats.bytes_acumulados    = [long]$stats.bytes_acumulados + $BytesEstaSemana
+    $stats.semanas_registradas = [int]$stats.semanas_registradas + 1
+    $stats.ultima_ejecucion    = $hoy
+
+    # Guardar antes de verificar reset (para no perder la semana actual)
+    try {
+        $stats | ConvertTo-Json | Out-File -FilePath $estadisticasFile -Encoding UTF8 -Force
+        Write-Log "Estadisticas anuales guardadas. Semana $($stats.semanas_registradas) de $semanas_max." "OK"
+    } catch {
+        Write-Log "No se pudo guardar estadisticas-anuales.json: $_" "WARN"
+    }
+
+    # Si se completaron 52 semanas, resetear para el próximo ciclo
+    if ($stats.semanas_registradas -ge $semanas_max) {
+        Write-Log "Ciclo anual completado (52 semanas). Reseteando estadisticas para el proximo ciclo." "OK"
+        $statsNuevo = [PSCustomObject]@{
+            inicio_ciclo        = $hoy
+            semanas_registradas = 0
+            bytes_acumulados    = [long]0
+            ultima_ejecucion    = $hoy
+        }
+        try {
+            $statsNuevo | ConvertTo-Json | Out-File -FilePath $estadisticasFile -Encoding UTF8 -Force
+        } catch {
+            Write-Log "No se pudo resetear estadisticas-anuales.json: $_" "WARN"
+        }
+    }
+
+    return $stats
 }
 
 # ------------------------------------------------------------------------------
@@ -459,7 +536,10 @@ function Enviar-Telegram {
 }
 
 function Enviar-Resumen-Telegram {
-    param([timespan]$Duracion)
+    param(
+        [timespan]$Duracion,
+        [PSCustomObject]$Stats
+    )
 
     $fecha   = Get-Date -Format "dd/MM/yyyy HH:mm"
     $equipo  = $env:COMPUTERNAME
@@ -474,9 +554,17 @@ function Enviar-Resumen-Telegram {
 
     $estado = if ($errores -gt 0) { "con $errores error(es)" } elseif ($warnings -gt 0) { "con $warnings aviso(s)" } else { "sin errores" }
 
-    # Formatear espacio liberado
+    # Formatear espacio liberado esta semana
     $mb = [math]::Round($script:BytesLiberados / 1MB, 1)
     $espacioTexto = if ($mb -ge 1024) { "$([math]::Round($mb/1024, 2)) GB" } else { "$mb MB" }
+
+    # Formatear acumulado anual con equivalencias
+    $semana      = if ($Stats) { $Stats.semanas_registradas } else { 1 }
+    $bytesAnio   = if ($Stats) { [long]$Stats.bytes_acumulados } else { $script:BytesLiberados }
+    $mbAnio      = [math]::Round($bytesAnio / 1MB, 1)
+    $acumTexto   = if ($mbAnio -ge 1024) { "$([math]::Round($mbAnio/1024, 2)) GB" } else { "$mbAnio MB" }
+    $fotos       = [math]::Round($bytesAnio / 5MB)
+    $canciones   = [math]::Round($bytesAnio / 4MB)
 
     $msg = @"
 <b>TuPcVeloz - Mantenimiento Semanal</b>
@@ -488,6 +576,11 @@ function Enviar-Resumen-Telegram {
 <b>Espacio liberado:</b> $espacioTexto
 <b>Apps actualizadas:</b> $($script:ChocoResumen)
 <b>Estado:</b> $estado
+
+<b>Acumulado anual (semana $semana de 52):</b>
+  Total liberado: $acumTexto
+  Equivale a: ~$fotos fotos de 5MB
+              ~$canciones canciones de 4MB
 
 <b>Modulos ejecutados:</b>
 - Modulo 1: Limpieza de temporales y caches
@@ -505,7 +598,10 @@ function Enviar-Resumen-Telegram {
 # ------------------------------------------------------------------------------
 
 function Crear-LogCliente {
-    param([timespan]$Duracion)
+    param(
+        [timespan]$Duracion,
+        [PSCustomObject]$Stats
+    )
 
     $fecha  = Get-Date -Format "dd/MM/yyyy 'a las' HH:mm"
     $equipo = $env:COMPUTERNAME
@@ -538,6 +634,15 @@ function Crear-LogCliente {
     $mb = [math]::Round($script:BytesLiberados / 1MB, 1)
     $espacioTexto = if ($mb -ge 1024) { "$([math]::Round($mb/1024, 2)) GB" } else { "$mb MB" }
 
+    # Acumulado anual para el cliente
+    $semana    = if ($Stats) { $Stats.semanas_registradas } else { 1 }
+    $bytesAnio = if ($Stats) { [long]$Stats.bytes_acumulados } else { $script:BytesLiberados }
+    $mbAnio    = [math]::Round($bytesAnio / 1MB, 1)
+    $acumTexto = if ($mbAnio -ge 1024) { "$([math]::Round($mbAnio/1024, 2)) GB" } else { "$mbAnio MB" }
+    $fotos     = [math]::Round($bytesAnio / 5MB)
+    $canciones = [math]::Round($bytesAnio / 4MB)
+    $inicioCiclo = if ($Stats) { $Stats.inicio_ciclo } else { (Get-Date -Format "yyyy-MM-dd") }
+
     $contenido = @"
 ============================================================
   TuPcVeloz - Servicio de Mantenimiento Semanal
@@ -548,7 +653,7 @@ Tu PC fue revisada y optimizada el $fecha.
 Equipo : $equipo
 Usuario: $usuario
 Duracion: $mins minutos
-Espacio liberado: $espacioTexto
+Espacio liberado esta semana: $espacioTexto
 Apps actualizadas: $($script:ChocoResumen)
 
 LO QUE SE HIZO EN ESTA SESION:
@@ -563,6 +668,18 @@ LO QUE SE HIZO EN ESTA SESION:
   [OK] Actualizacion de programas instalados
        - Se actualizaron automaticamente todos los programas
          gestionados por Chocolatey
+
+============================================================
+  RESUMEN ANUAL ACUMULADO (semana $semana de 52)
+  Desde: $inicioCiclo
+============================================================
+
+  Total liberado en el anio : $acumTexto
+  Equivale aproximadamente a: $fotos fotos de 5MB
+                               $canciones canciones de 4MB
+
+  Sin el servicio TuPcVeloz, toda esa basura digital
+  seguiria frenando tu PC semana a semana.
 
 ============================================================
   Tu PC esta optimizada y lista para usar.
@@ -624,6 +741,14 @@ try {
 # Calcular duracion final
 $duracion = (Get-Date) - $fechaInicio
 
+# Gestionar estadísticas anuales acumuladas
+$stats = $null
+try {
+    $stats = Gestionar-Estadisticas -BytesEstaSemana $script:BytesLiberados
+} catch {
+    Write-Log "Error en Gestionar-Estadisticas: $_" "WARN"
+}
+
 # Resumen en log tecnico
 Write-Log "======================================================" "INFO"
 Write-Log "  MANTENIMIENTO COMPLETADO" "OK"
@@ -633,14 +758,14 @@ Write-Log "======================================================" "INFO"
 
 # Modulo 4 — Notificacion Telegram
 try {
-    Enviar-Resumen-Telegram -Duracion $duracion
+    Enviar-Resumen-Telegram -Duracion $duracion -Stats $stats
 } catch {
     Write-Log "Error fatal en MODULO 4 (Telegram): $_" "ERROR"
 }
 
 # Modulo 5 — Log para el cliente en el Escritorio
 try {
-    Crear-LogCliente -Duracion $duracion
+    Crear-LogCliente -Duracion $duracion -Stats $stats
 } catch {
     Write-Log "Error fatal en MODULO 5 (Log cliente): $_" "ERROR"
 }
