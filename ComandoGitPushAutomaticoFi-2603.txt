@@ -22,13 +22,12 @@ git push origin HEAD:main
 git clone https://github.com/HoracEzq58/Fi-2603.git "C:\Users\Public\Pictures\Fi-2603"
 git clone https://github.com/HoracEzq58/Automatico.git "C:\Users\Public\Documents\Automatico"
 
-# descargar carpeta completa si lo hago en PC CLIENTES
+# descargar carpeta completa si lo hago en PC CLIENTES (no tienen Git) 
 Remove-Item "C:\Users\Public\Pictures\Fi-2603" -Recurse -Force -ErrorAction SilentlyContinue;
 Invoke-WebRequest "https://github.com/HoracEzq58/Fi-2603/archive/refs/heads/main.zip" -OutFile "C:\Users\Public\Pictures\Fi-2603.zip";
 Expand-Archive "C:\Users\Public\Pictures\Fi-2603.zip" -DestinationPath "C:\Users\Public\Pictures" -Force;
 Remove-Item "C:\Users\Public\Pictures\Fi-2603.zip";
 Rename-Item "C:\Users\Public\Pictures\Fi-2603-main" "Fi-2603"
 
-# descargar solo un archivo (en MI COMPUTADORA: MasterChef HEzqDaw) o, en las PC notebook's de CLIENTES
+# descargar solo un archivo:  en MI COMPUTADORA: MasterChef HEzqDaw o, en las PC notebook's de CLIENTES !!
 Invoke-WebRequest "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/SimilCPU-Z-Old-Machine.bat" -OutFile "$env:USERPROFILE\Downloads\SimilCPU-Z-Old-Machine.bat"
-
