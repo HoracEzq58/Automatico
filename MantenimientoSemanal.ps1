@@ -3,6 +3,32 @@
 # Script PowerShell 7 — Limpieza + Actualización Chocolatey + Telegram
 # Windows 10/11 | Requiere ejecución como Administrador
 # Log: C:\Users\Public\Documents\AutoTemp\
+# Modificado: 03/04/2026 21 hs
+# ------------------------------------------------------------------------------
+# Versión : 4.1
+# Cambios : - Fix: $script:AvisoVencimiento se inicializa ANTES del bloque de
+#             vencimiento para que no sea pisada por la asignacion global.
+#           - Fix: powershell-core excluido de choco upgrade (igual que rustdesk)
+#             para evitar que el instalador MSI mate el proceso pwsh en ejecucion.
+#           - Nuevo Modulo 7: actualiza powershell-core y rustdesk al FINAL del
+#             script, cuando ya terminaron todos los modulos. Si falla, no afecta
+#             el mantenimiento ni el reporte al cliente.
+# ------------------------------------------------------------------------------
+# Versión : 4
+# Cambios : - Kill switch: lee flag "Activo" de config.json. Si es false,
+#             el script termina silenciosamente sin ejecutar ningún módulo.
+#           - Vencimiento: lee campo "VenceEl" (formato yyyy-MM-dd) de
+#             config.json. Si la fecha actual la supera, el script termina
+#             y envía Telegram avisando que el servicio venció en esa PC.
+#           - Blindaje NTFS: función Blindar-Config endurece permisos del
+#             config.json al finalizar (solo SYSTEM y Administradores pueden
+#             leer; usuarios normales sin acceso).
+#           - Módulo 5 rediseñado: el .txt se crea directamente en el
+#             Escritorio del cliente (sin acceso directo .lnk). Se elimina
+#             la creación del acceso directo anterior.
+#           - Ventana WinForms con countdown: al finalizar el mantenimiento
+#             se muestra el reporte en una ventana flotante con countdown
+#             de 18 segundos y botón para cerrar antes. No bloquea el script.
 # ------------------------------------------------------------------------------
 # Versión : 3
 # Cambios : - Nueva función Gestionar-Estadisticas: acumulador anual de bytes
@@ -32,13 +58,218 @@ $fechaInicio = Get-Date
 
 # --- TELEGRAM ---
 $ConfigPath = "C:\Users\Public\Documents\Automatico\config.json"
-$Config = Get-Content $ConfigPath | ConvertFrom-Json
+$Config = [System.IO.File]::ReadAllText($ConfigPath) | ConvertFrom-Json
 $TelegramToken  = $Config.TelegramToken
 $TelegramChatID = $Config.TelegramChatID
 
+# ------------------------------------------------------------------------------
+# SECCIÓN 1 — KILL SWITCH Y CONTROL DE VENCIMIENTO
+# ------------------------------------------------------------------------------
+
+# Kill switch: si "Activo" es false, terminar silenciosamente
+
+$script:AvisoVencimiento = "" # Movido por recomendacion del Otro Yo de Claude el 09/04/2026 15.47 hs - Se llena si faltan 14 dias o menos para vencer.
+if ($Config.PSObject.Properties.Name -contains 'Activo') {
+    if ($Config.Activo -eq $false) {
+        $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        "$ts [INFO] Servicio inactivo (Activo=false en config.json). Mantenimiento cancelado." |
+            Out-File -FilePath $logFile -Append
+        exit 0
+    }
+}
+
+# Control de vencimiento: si "VenceEl" existe, evaluar vencido o proximo a vencer
+if ($Config.PSObject.Properties.Name -contains 'VenceEl') {
+    try {
+        # Parseo robusto: split manual para evitar dependencia de cultura regional
+        $partes = $Config.VenceEl -split "-"
+        $fechaVence = [datetime]::new([int]$partes[0], [int]$partes[1], [int]$partes[2])
+        $diasRestantes  = ([math]::Floor(($fechaVence - (Get-Date)).TotalDays))
+        $fechaVenceTxt  = $fechaVence.ToString("dd/MM/yyyy")
+
+        if ((Get-Date) -gt $fechaVence) {
+            # --- VENCIDO: avisar al cliente y a TuPcVeloz, luego salir ---
+            $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            "$ts [WARN] Servicio vencido el $($Config.VenceEl) en equipo $env:COMPUTERNAME." |
+                Out-File -FilePath $logFile -Append
+
+            # Aviso Telegram a TuPcVeloz
+            $uriV  = "https://api.telegram.org/bot$TelegramToken/sendMessage"
+            $msgV  = "Servicio TuPcVeloz VENCIDO`n`nEquipo: $env:COMPUTERNAME`nVencio el: $fechaVenceTxt`nFecha actual: $(Get-Date -Format 'dd/MM/yyyy')`n`nRenovar o desactivar el servicio NSSM."
+            $bodyV = @{ chat_id = $TelegramChatID; text = $msgV } | ConvertTo-Json -Compress
+            try {
+                Invoke-RestMethod -Uri $uriV -Method Post `
+                    -ContentType "application/json; charset=utf-8" `
+                    -Body ([System.Text.Encoding]::UTF8.GetBytes($bodyV)) `
+                    -ErrorAction Stop | Out-Null
+            } catch { }
+
+            # Aviso al cliente: .txt en Escritorio
+            try {
+                $usuarioVenc = $null
+                try { $usuarioVenc = (Get-CimInstance -Class Win32_ComputerSystem -ErrorAction Stop).UserName } catch { }
+                if ($usuarioVenc -and $usuarioVenc -match '\\') { $usuarioVenc = $usuarioVenc.Split('\')[1] }
+                if (-not $usuarioVenc -or $usuarioVenc -match '\$$' -or $usuarioVenc -eq 'SYSTEM') {
+                    $usuarioVenc = Get-ChildItem "C:\Users" -Directory |
+                        Where-Object { $_.Name -notin @('Public','Default','Default User','All Users') -and $_.Name -notmatch '\$$' } |
+                        Select-Object -First 1 -ExpandProperty Name
+                }
+                $escritorioVenc  = "C:\Users\$usuarioVenc\Desktop"
+                $archivoVenc     = "$escritorioVenc\TuPcVeloz-SERVICIO-VENCIDO.txt"
+                $contenidoVenc   = @"
+============================================================
+  TuPcVeloz - Aviso de servicio
+============================================================
+
+El servicio de mantenimiento automatico TuPcVeloz
+vencio el $fechaVenceTxt.
+
+Tu PC ya NO esta siendo mantenida automaticamente.
+
+Para renovar el servicio contactanos en:
+  tupcveloz.com
+
+============================================================
+  Servicio brindado por TuPcVeloz - tupcveloz.com
+============================================================
+"@
+                if (-not (Test-Path $escritorioVenc)) {
+                    New-Item -Path $escritorioVenc -ItemType Directory -Force | Out-Null
+                }
+                $contenidoVenc | Out-File -FilePath $archivoVenc -Encoding UTF8 -Force
+                "$ts [OK] Aviso de vencimiento escrito en Escritorio del cliente: $archivoVenc" |
+                    Out-File -FilePath $logFile -Append
+            } catch {
+                "$ts [WARN] No se pudo escribir aviso de vencimiento en Escritorio: $_" |
+                    Out-File -FilePath $logFile -Append
+            }
+
+            # Aviso al cliente: ventana WinForms roja sin countdown via schtasks
+            # (Mostrar-VentanaReporte aun no esta definida aqui, usamos llamada
+            #  diferida via Start-Job para que se defina antes de ejecutarse)
+            try {
+                $contenidoVencWin = @"
+============================================================
+  TuPcVeloz - Aviso de servicio
+============================================================
+
+El servicio de mantenimiento automatico TuPcVeloz
+vencio el $fechaVenceTxt.
+
+Tu PC ya NO esta siendo mantenida automaticamente.
+
+Para renovar el servicio contactanos en:
+  tupcveloz.com
+
+============================================================
+"@
+                # Lanzar ventana roja sin countdown (Countdown=0)
+                # La funcion Mostrar-VentanaReporte se llama desde un job
+                # para no depender del orden de definicion en el script
+                $auxRojo = $contenidoVencWin -replace "'", "''"
+                $auxPathRojo = "$logDir\TuPcVeloz-Vencido-Aux.ps1"
+                $auxScriptRojo = @"
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+`$form = New-Object System.Windows.Forms.Form
+`$form.Text = 'TuPcVeloz - Servicio vencido'
+`$form.Size = New-Object System.Drawing.Size(560, 560)
+`$form.StartPosition = 'CenterScreen'
+`$form.FormBorderStyle = 'FixedDialog'
+`$form.MaximizeBox = `$false
+`$form.TopMost = `$true
+`$form.BackColor = [System.Drawing.Color]::FromArgb(245,245,245)
+`$banner = New-Object System.Windows.Forms.Panel
+`$banner.Dock = 'Top'; `$banner.Height = 48
+`$banner.BackColor = [System.Drawing.Color]::FromArgb(200,50,50)
+`$form.Controls.Add(`$banner)
+`$lblT = New-Object System.Windows.Forms.Label
+`$lblT.Text = '  TuPcVeloz - Aviso de servicio'
+`$lblT.Dock = 'Fill'
+`$lblT.Font = New-Object System.Drawing.Font('Segoe UI',13,[System.Drawing.FontStyle]::Bold)
+`$lblT.ForeColor = [System.Drawing.Color]::White
+`$lblT.TextAlign = 'MiddleLeft'
+`$banner.Controls.Add(`$lblT)
+`$txt = New-Object System.Windows.Forms.TextBox
+`$txt.Multiline = `$true; `$txt.ScrollBars = 'Vertical'; `$txt.ReadOnly = `$true
+`$txt.Font = New-Object System.Drawing.Font('Courier New',9)
+`$txt.BackColor = [System.Drawing.Color]::White
+`$txt.ForeColor = [System.Drawing.Color]::FromArgb(30,30,30)
+`$txt.Location = New-Object System.Drawing.Point(10,58)
+`$txt.Size = New-Object System.Drawing.Size(524,400)
+`$txt.Text = '$auxRojo'
+`$form.Controls.Add(`$txt)
+`$lblC = New-Object System.Windows.Forms.Label
+`$lblC.Text = 'Hace clic en Cerrar cuando termines de leer.'
+`$lblC.Location = New-Object System.Drawing.Point(10,468)
+`$lblC.Size = New-Object System.Drawing.Size(340,24)
+`$lblC.Font = New-Object System.Drawing.Font('Segoe UI',9)
+`$lblC.ForeColor = [System.Drawing.Color]::FromArgb(100,100,100)
+`$form.Controls.Add(`$lblC)
+`$btn = New-Object System.Windows.Forms.Button
+`$btn.Text = 'Cerrar'
+`$btn.Location = New-Object System.Drawing.Point(430,462)
+`$btn.Size = New-Object System.Drawing.Size(104,32)
+`$btn.Font = New-Object System.Drawing.Font('Segoe UI',9,[System.Drawing.FontStyle]::Bold)
+`$btn.BackColor = [System.Drawing.Color]::FromArgb(200,50,50)
+`$btn.ForeColor = [System.Drawing.Color]::White
+`$btn.FlatStyle = 'Flat'; `$btn.FlatAppearance.BorderSize = 0
+`$btn.Add_Click({ `$form.Close() })
+`$form.Controls.Add(`$btn)
+[System.Windows.Forms.Application]::Run(`$form)
+"@
+                [System.IO.File]::WriteAllText($auxPathRojo, $auxScriptRojo, [System.Text.UTF8Encoding]::new($false))
+
+                # Detectar usuario activo
+                $usuVenc = $null
+                $quser = & quser 2>$null
+                if ($quser) {
+                    $linea = $quser | Where-Object { $_ -match 'Activ|Active' } | Select-Object -First 1
+                    if (-not $linea) { $linea = $quser | Select-Object -Skip 1 -First 1 }
+                    if ($linea -match '^\s*>?\s*(\S+)') { $usuVenc = $Matches[1].TrimStart('>') }
+                }
+                if (-not $usuVenc) {
+                    $usuVenc = Get-ChildItem "C:\Users" -Directory |
+                        Where-Object { $_.Name -notin @('Public','Default','Default User','All Users') -and $_.Name -notmatch '\$$' } |
+                        Select-Object -First 1 -ExpandProperty Name
+                }
+
+                if ($usuVenc) {
+                    $tnRojo  = "TuPcVeloz-Vencido-$(Get-Date -Format 'HHmmss')"
+                    $horaR   = (Get-Date).AddMinutes(1).ToString("HH:mm")
+                    $argRojo = "/C schtasks /Create /TN `"$tnRojo`" /TR `"pwsh -WindowStyle Hidden -NonInteractive -File '$auxPathRojo'`" /SC ONCE /ST $horaR /RU `"$usuVenc`" /F /RL LIMITED"
+                    $pr = Start-Process "cmd.exe" -ArgumentList $argRojo -Wait -PassThru -NoNewWindow
+                    if ($pr.ExitCode -eq 0) {
+                        Start-Sleep -Seconds 2
+                        schtasks /Run /TN $tnRojo 2>$null | Out-Null
+                        Start-Job -ScriptBlock { param($tn); Start-Sleep 300; schtasks /Delete /TN $tn /F 2>$null } -ArgumentList $tnRojo | Out-Null
+                        "$ts [OK] Ventana WinForms de vencimiento lanzada como '$usuVenc'." | Out-File -FilePath $logFile -Append
+                    }
+                }
+            } catch {
+                "$ts [WARN] No se pudo lanzar ventana de vencimiento: $_" | Out-File -FilePath $logFile -Append
+            }
+
+            Start-Sleep -Seconds 3
+            exit 0
+
+        } elseif ($diasRestantes -le 14) {
+            # --- PROXIMO A VENCER: setear aviso para inyectar en reporte ---
+            $script:AvisoVencimiento = "AVISO: El servicio TuPcVeloz vence el $fechaVenceTxt (faltan $diasRestantes dias). Contactanos en tupcveloz.com para renovar."
+            $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+			"$ts [WARN] Servicio proximo a vencer: $diasRestantes dias restantes." | Out-File -FilePath $logFile -Append
+        }
+
+    } catch {
+        $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        "$ts [WARN] No se pudo parsear VenceEl='$($Config.VenceEl)'. Formato esperado: yyyy-MM-dd. Continuando." |
+            Out-File -FilePath $logFile -Append
+    }
+}
+# ------------------------------------------------------------------------------
 # Contador global de espacio liberado (en bytes)
-$script:BytesLiberados = 0
-$script:ChocoResumen   = "sin cambios"
+$script:BytesLiberados   = 0
+$script:ChocoResumen     = "sin cambios"
 
 # Ruta del JSON de estadísticas anuales acumuladas
 $estadisticasFile = "$logDir\estadisticas-anuales.json"
@@ -209,7 +440,9 @@ function Eliminar-TareasInvasivas {
         "Driver Booster","DriverBooster","Driver Easy","DriverEasy",
         "Glary","PCOptimizer","WinOptimizer","Auslogics","Malwarebytes",
         "Babylon","Conduit","OpenCandy","Reimage","SpeedUpMyPC",
-        "iSkysoft","Wondershare"
+        "iSkysoft","Wondershare",
+        "Core Temp","CoreTemp","Core Temp Autostart",
+        "PDFXChange","PDFXChangeAutoUpdate","TrackerUpdate"
     )
 
     Write-Log "Buscando tareas programadas de software invasivo..." "INFO"
@@ -428,7 +661,7 @@ function Iniciar-Chocolatey {
     try {
         # --- Intento 1: choco upgrade normal ---
         $proc = Start-Process -FilePath "choco" `
-                              -ArgumentList "upgrade all -y --no-progress" `
+                              -ArgumentList "upgrade all -y --no-progress --except=""rustdesk.install,powershell-core""" `
                               -RedirectStandardOutput $tempOut `
                               -RedirectStandardError  $tempErr `
                               -NoNewWindow -PassThru -Wait
@@ -455,7 +688,7 @@ function Iniciar-Chocolatey {
 
             # --- Intento 2: choco upgrade con --ignore-checksums ---
             $proc2 = Start-Process -FilePath "choco" `
-                                   -ArgumentList "upgrade all --ignore-checksums -y --no-progress" `
+                                   -ArgumentList "upgrade all --ignore-checksums -y --no-progress --except=""rustdesk.install,powershell-core""" `
                                    -RedirectStandardOutput $tempOut `
                                    -RedirectStandardError  $tempErr `
                                    -NoNewWindow -PassThru -Wait
@@ -625,11 +858,9 @@ function Crear-LogCliente {
                        Select-Object -First 1 -ExpandProperty Name
     }
 
-    $usuario       = $usuarioReal
-    $documentos    = "C:\Users\$usuario\Documents"
-    $escritorio    = "C:\Users\$usuario\Desktop"
-    $archivoCliente = "$documentos\TuPcVeloz-Ultimo-Mantenimiento.txt"
-    $accesoDirecto  = "$escritorio\TuPcVeloz-Ultimo-Mantenimiento.lnk"
+    $usuario        = $usuarioReal
+    $escritorio     = "C:\Users\$usuario\Desktop"
+    $archivoCliente = "$escritorio\TuPcVeloz-Ultimo-Mantenimiento.txt"
 
     $mb = [math]::Round($script:BytesLiberados / 1MB, 1)
     $espacioTexto = if ($mb -ge 1024) { "$([math]::Round($mb/1024, 2)) GB" } else { "$mb MB" }
@@ -674,7 +905,7 @@ LO QUE SE HIZO EN ESTA SESION:
   Desde: $inicioCiclo
 ============================================================
 
-  Total liberado en el anio : $acumTexto
+  Total liberado en el año : $acumTexto
   Equivale aproximadamente a: $fotos fotos de 5MB
                                $canciones canciones de 4MB
 
@@ -687,10 +918,15 @@ LO QUE SE HIZO EN ESTA SESION:
 ============================================================
 "@
 
-    # Crear el archivo .txt en Documents
+    # Inyectar aviso de vencimiento si corresponde (faltan 14 dias o menos)
+    if ($script:AvisoVencimiento) {
+        $contenido += "`r`n`r`n*** $($script:AvisoVencimiento) ***"
+    }
+
+    # Crear el .txt directamente en el Escritorio del cliente
     try {
-        if (-not (Test-Path $documentos)) {
-            New-Item -Path $documentos -ItemType Directory -Force | Out-Null
+        if (-not (Test-Path $escritorio)) {
+            New-Item -Path $escritorio -ItemType Directory -Force | Out-Null
         }
         $contenido | Out-File -FilePath $archivoCliente -Encoding UTF8 -Force
         Write-Log "Log para el cliente generado en: $archivoCliente" "OK"
@@ -699,20 +935,245 @@ LO QUE SE HIZO EN ESTA SESION:
         return
     }
 
-    # Crear acceso directo en Desktop apuntando al .txt
+    # Devolver el contenido y la ruta para que Mostrar-VentanaReporte los use
+    return [PSCustomObject]@{
+        Contenido = $contenido
+        Ruta      = $archivoCliente
+    }
+}
+
+# ------------------------------------------------------------------------------
+# MÓDULO 6 — VENTANA WINFORMS CON COUNTDOWN
+# ------------------------------------------------------------------------------
+
+function Mostrar-VentanaReporte {
+    param(
+        [string]$Contenido,
+        [string]$RutaTxt,
+        [string]$BannerColor = "30,120,200",   # RGB azul normal
+        [string]$BannerTitulo = "TuPcVeloz - Mantenimiento Semanal",
+        [int]$Countdown = 18                    # 0 = sin countdown (ventana de vencimiento)
+    )
+
+    # El servicio NSSM corre en Session 0 (aislada del escritorio del usuario).
+    # Las ventanas creadas desde Session 0 son invisibles para el usuario.
+    # Solucion: escribir un .ps1 auxiliar en Public\Documents\AutoTemp y
+    # lanzarlo via schtasks como el usuario activo (Session 1), que si
+    # tiene acceso al escritorio. La tarea se autoeliminara al terminar.
+
+    # Escapar el contenido para embeber en here-string dentro del .ps1 auxiliar
+    $contenidoEscapado = $Contenido -replace "'", "''"
+
+    $auxScript = @"
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+`$segundos = $Countdown
+`$rgb      = '$BannerColor' -split ','
+
+`$form                 = New-Object System.Windows.Forms.Form
+`$form.Text            = 'TuPcVeloz'
+`$form.Size            = New-Object System.Drawing.Size(560, 560)
+`$form.StartPosition   = 'CenterScreen'
+`$form.FormBorderStyle = 'FixedDialog'
+`$form.MaximizeBox     = `$false
+`$form.TopMost         = `$true
+`$form.BackColor       = [System.Drawing.Color]::FromArgb(245, 245, 245)
+
+`$banner               = New-Object System.Windows.Forms.Panel
+`$banner.Dock          = 'Top'
+`$banner.Height        = 48
+`$banner.BackColor     = [System.Drawing.Color]::FromArgb([int]`$rgb[0], [int]`$rgb[1], [int]`$rgb[2])
+`$form.Controls.Add(`$banner)
+
+`$lblT                 = New-Object System.Windows.Forms.Label
+`$lblT.Text            = '  $BannerTitulo'
+`$lblT.Dock            = 'Fill'
+`$lblT.Font            = New-Object System.Drawing.Font('Segoe UI', 13, [System.Drawing.FontStyle]::Bold)
+`$lblT.ForeColor       = [System.Drawing.Color]::White
+`$lblT.TextAlign       = 'MiddleLeft'
+`$banner.Controls.Add(`$lblT)
+
+`$txt                  = New-Object System.Windows.Forms.TextBox
+`$txt.Multiline        = `$true
+`$txt.ScrollBars       = 'Vertical'
+`$txt.ReadOnly         = `$true
+`$txt.Font             = New-Object System.Drawing.Font('Courier New', 9)
+`$txt.BackColor        = [System.Drawing.Color]::White
+`$txt.ForeColor        = [System.Drawing.Color]::FromArgb(30, 30, 30)
+`$txt.Location         = New-Object System.Drawing.Point(10, 58)
+`$txt.Size             = New-Object System.Drawing.Size(524, 400)
+`$txt.Text             = '$contenidoEscapado'
+`$form.Controls.Add(`$txt)
+
+`$lblCuenta            = New-Object System.Windows.Forms.Label
+`$lblCuenta.Location   = New-Object System.Drawing.Point(10, 468)
+`$lblCuenta.Size       = New-Object System.Drawing.Size(340, 24)
+`$lblCuenta.Font       = New-Object System.Drawing.Font('Segoe UI', 9)
+`$lblCuenta.ForeColor  = [System.Drawing.Color]::FromArgb(100, 100, 100)
+`$form.Controls.Add(`$lblCuenta)
+
+`$btn                  = New-Object System.Windows.Forms.Button
+`$btn.Text             = 'Cerrar'
+`$btn.Location         = New-Object System.Drawing.Point(430, 462)
+`$btn.Size             = New-Object System.Drawing.Size(104, 32)
+`$btn.Font             = New-Object System.Drawing.Font('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
+`$btn.BackColor        = [System.Drawing.Color]::FromArgb([int]`$rgb[0], [int]`$rgb[1], [int]`$rgb[2])
+`$btn.ForeColor        = [System.Drawing.Color]::White
+`$btn.FlatStyle        = 'Flat'
+`$btn.FlatAppearance.BorderSize = 0
+`$btn.Add_Click({ `$form.Close() })
+`$form.Controls.Add(`$btn)
+
+if (`$segundos -gt 0) {
+    `$lblCuenta.Text = "Cerrando en `$segundos segundos..."
+    `$restantes = `$segundos
+    `$timer = New-Object System.Windows.Forms.Timer
+    `$timer.Interval = 1000
+    `$timer.Add_Tick({
+        `$script:restantes--
+        if (`$script:restantes -le 0) { `$timer.Stop(); `$form.Close() }
+        else { `$lblCuenta.Text = "Cerrando en `$script:restantes segundos..." }
+    })
+    `$timer.Start()
+} else {
+    `$lblCuenta.Text = 'Hace clic en Cerrar cuando termines de leer.'
+}
+
+[System.Windows.Forms.Application]::Run(`$form)
+"@
+
+    # Escribir el .ps1 auxiliar sin BOM en AutoTemp
+    $auxPath = "$logDir\TuPcVeloz-Reporte-Aux.ps1"
     try {
-        if (-not (Test-Path $escritorio)) {
-            New-Item -Path $escritorio -ItemType Directory -Force | Out-Null
-        }
-        $shell    = New-Object -ComObject WScript.Shell
-        $shortcut = $shell.CreateShortcut($accesoDirecto)
-        $shortcut.TargetPath       = $archivoCliente
-        $shortcut.Description      = "Ultimo mantenimiento realizado por TuPcVeloz"
-        $shortcut.WorkingDirectory = $documentos
-        $shortcut.Save()
-        Write-Log "Acceso directo creado en Escritorio: $accesoDirecto" "OK"
+        [System.IO.File]::WriteAllText($auxPath, $auxScript, [System.Text.UTF8Encoding]::new($false))
     } catch {
-        Write-Log "No se pudo crear el acceso directo en Escritorio: $_" "WARN"
+        Write-Log "No se pudo escribir script auxiliar WinForms: $_" "WARN"
+        return
+    }
+
+    # Detectar usuario activo (el que tiene sesion en el escritorio)
+    $usuarioActivo = $null
+    try {
+        $quser = & quser 2>$null
+        if ($quser) {
+            $lineaActiva = $quser | Where-Object { $_ -match 'Activ|Active' } | Select-Object -First 1
+            if (-not $lineaActiva) { $lineaActiva = $quser | Select-Object -Skip 1 -First 1 }
+            if ($lineaActiva -match '^\s*>?\s*(\S+)') {
+                $usuarioActivo = $Matches[1].TrimStart('>')
+            }
+        }
+    } catch { }
+
+    if (-not $usuarioActivo) {
+        # Fallback: primer usuario humano de C:\Users
+        $usuarioActivo = Get-ChildItem "C:\Users" -Directory |
+            Where-Object { $_.Name -notin @('Public','Default','Default User','All Users') -and $_.Name -notmatch '\$$' } |
+            Select-Object -First 1 -ExpandProperty Name
+    }
+
+    if (-not $usuarioActivo) {
+        Write-Log "No se pudo detectar usuario activo para lanzar ventana WinForms." "WARN"
+        return
+    }
+
+    # Nombre unico para la tarea (evita colisiones si corre dos veces seguidas)
+    $taskName = "TuPcVeloz-Reporte-$(Get-Date -Format 'HHmmss')"
+
+    # Crear tarea programada que corre como el usuario activo, una sola vez, ahora
+    # /ST con hora actual + 1 min para que schtasks la acepte; /RU sin password
+    $horaEjecucion = (Get-Date).AddMinutes(1).ToString("HH:mm")
+    $argCmd = "/C schtasks /Create /TN `"$taskName`" /TR `"pwsh -WindowStyle Hidden -NonInteractive -File '$auxPath'`" /SC ONCE /ST $horaEjecucion /RU `"$usuarioActivo`" /F /RL LIMITED"
+
+    try {
+        $proc = Start-Process -FilePath "cmd.exe" -ArgumentList $argCmd -Wait -PassThru -NoNewWindow
+        if ($proc.ExitCode -eq 0) {
+            # Ejecutar la tarea inmediatamente sin esperar la hora programada
+            Start-Sleep -Seconds 2
+            schtasks /Run /TN $taskName 2>$null | Out-Null
+            # Programar eliminacion de la tarea auxiliar tras 5 minutos
+            Start-Job -ScriptBlock {
+                param($tn)
+                Start-Sleep -Seconds 300
+                schtasks /Delete /TN $tn /F 2>$null | Out-Null
+            } -ArgumentList $taskName | Out-Null
+            Write-Log "Ventana WinForms lanzada como usuario '$usuarioActivo' via schtasks ($taskName)." "OK"
+        } else {
+            Write-Log "schtasks devolvio codigo $($proc.ExitCode) al crear tarea WinForms." "WARN"
+        }
+    } catch {
+        Write-Log "No se pudo lanzar ventana WinForms via schtasks: $_" "WARN"
+    }
+}
+
+# ------------------------------------------------------------------------------
+# MÓDULO 7 — ACTUALIZACIÓN SEGURA DE PAQUETES POSTERGADOS
+# ------------------------------------------------------------------------------
+# powershell-core: su instalador MSI reemplaza el ejecutable en uso. Si corre
+#   durante el script mata el proceso pwsh padre. Se actualiza al final.
+# rustdesk: su instalador reinicia el servicio RustDesk, lo que puede cortar
+#   sesiones remotas activas en medio del mantenimiento. Al final es seguro.
+# ------------------------------------------------------------------------------
+
+function Actualizar-PaquetesPostergados {
+    Write-Separador "MODULO 7: ACTUALIZACION DE PAQUETES POSTERGADOS"
+
+    $paquetes = @("powershell-core", "rustdesk.install")
+    $tempOut7  = "$logDir\choco_post_output.tmp"
+    $tempErr7  = "$logDir\choco_post_error.tmp"
+
+    foreach ($pkg in $paquetes) {
+        Write-Log "Actualizando paquete postergado: $pkg" "INFO"
+        try {
+            $p = Start-Process -FilePath "choco" `
+                               -ArgumentList "upgrade $pkg -y --no-progress" `
+                               -RedirectStandardOutput $tempOut7 `
+                               -RedirectStandardError  $tempErr7 `
+                               -NoNewWindow -PassThru -Wait
+
+            if (Test-Path $tempOut7) {
+                Get-Content $tempOut7 | ForEach-Object { Write-Log $_ "INFO" }
+                Remove-Item $tempOut7 -Force -ErrorAction SilentlyContinue
+            }
+            if (Test-Path $tempErr7) {
+                Get-Content $tempErr7 | ForEach-Object { Write-Log $_ "WARN" }
+                Remove-Item $tempErr7 -Force -ErrorAction SilentlyContinue
+            }
+
+            $exitCode7 = 0
+            try { $exitCode7 = $p.ExitCode } catch { $exitCode7 = -1 }
+
+            if ($exitCode7 -eq 0) {
+                Write-Log "Paquete '$pkg' actualizado correctamente." "OK"
+            } else {
+                Write-Log "choco upgrade $pkg termino con codigo $exitCode7." "WARN"
+            }
+        } catch {
+            Write-Log "Error al actualizar '$pkg': $_" "WARN"
+        }
+    }
+
+    Write-Log "MODULO 7 FINALIZADO." "OK"
+}
+
+# ------------------------------------------------------------------------------
+# FUNCIÓN: BLINDAJE NTFS DE CONFIG.JSON
+# ------------------------------------------------------------------------------
+
+function Blindar-Config {
+    param([string]$Ruta)
+    try {
+        # Deshabilitar herencia y quitar permisos heredados
+        & icacls $Ruta /inheritance:d /T /Q 2>&1 | Out-Null
+        # Quitar acceso a usuarios normales
+        & icacls $Ruta /remove "BUILTIN\Users" /T /Q 2>&1 | Out-Null
+        & icacls $Ruta /remove "NT AUTHORITY\Authenticated Users" /T /Q 2>&1 | Out-Null
+        # Asegurar que SYSTEM y Administradores conservan lectura
+        & icacls $Ruta /grant "NT AUTHORITY\SYSTEM:(R)" /Q 2>&1 | Out-Null
+        & icacls $Ruta /grant "BUILTIN\Administrators:(R)" /Q 2>&1 | Out-Null
+        Write-Log "config.json blindado con permisos NTFS restringidos." "OK"
+    } catch {
+        Write-Log "No se pudo blindar config.json: $_" "WARN"
     }
 }
 
@@ -763,9 +1224,37 @@ try {
     Write-Log "Error fatal en MODULO 4 (Telegram): $_" "ERROR"
 }
 
-# Modulo 5 — Log para el cliente en el Escritorio
+# Modulo 5 — Log para el cliente en el Escritorio + ventana WinForms
+$resultadoLog = $null
 try {
-    Crear-LogCliente -Duracion $duracion -Stats $stats
+    $resultadoLog = Crear-LogCliente -Duracion $duracion -Stats $stats
 } catch {
     Write-Log "Error fatal en MODULO 5 (Log cliente): $_" "ERROR"
+}
+
+# Modulo 6 — Ventana WinForms con countdown
+if ($resultadoLog -and $resultadoLog.Contenido) {
+    try {
+        Mostrar-VentanaReporte -Contenido $resultadoLog.Contenido -RutaTxt $resultadoLog.Ruta
+    } catch {
+        Write-Log "Error al lanzar ventana WinForms: $_" "WARN"
+    }
+}
+
+# Modulo 7 — Actualizacion segura de paquetes postergados (pwsh-core, rustdesk)
+# Se ejecuta AL FINAL, cuando ya terminaron todos los modulos y el reporte fue
+# generado. Si el instalador mata el proceso pwsh (caso powershell-core), no
+# afecta nada de lo anterior. rustdesk se excluye del choco normal porque su
+# instalador reinicia el servicio y puede interferir con conexiones activas.
+try {
+    Actualizar-PaquetesPostergados
+} catch {
+    Write-Log "Error en Modulo 7 (paquetes postergados): $_" "WARN"
+}
+
+# Blindaje NTFS del config.json (idempotente, corre siempre al final)
+try {
+    Blindar-Config -Ruta $ConfigPath
+} catch {
+    Write-Log "Error en Blindar-Config: $_" "WARN"
 }

@@ -1,1 +1,4 @@
 config.json
+Instalar-Servicio.ps1
+Desinstalar-Servicio.ps1
+Renovar-Servicio-MantSem.ps1

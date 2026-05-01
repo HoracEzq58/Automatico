@@ -4,13 +4,22 @@ git add .
 git commit -m "ultimos cambios"
 git push origin HEAD:main
 
-# Fi-2603 - primer Commit (en MI COMPUTADORA)
+# Fi-2603 - primer Commit (en MI COMPUTADORA) ** primero crear repositorio en git **
 cd "D:\Biblioteca-Horace\Imagenes-Horacio\Fi-2603"
 git init
 git add .
 git commit -m "Primer commit"
 git remote add origin https://github.com/HoracEzq58/Fi-2603.git
 git push origin HEAD:main
+
+# Fi-2603 - primer Commit (en MI COMPUTADORA)
+cd "D:\Biblioteca-Horace\Documentos-Horacio-2\DocuHoraEzq\Automatico-Linux"
+git init
+git add .
+git commit -m "Primer commit"
+git remote add origin https://github.com/HoracEzq58/Automatico-Linux.git
+git push origin HEAD:main
+
 
 # # Fi-2603 actualizar - (en MI COMPUTADORA)
 cd "D:\Biblioteca-Horace\Imagenes-Horacio\Fi-2603"

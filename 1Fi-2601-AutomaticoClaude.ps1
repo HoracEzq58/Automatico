@@ -6,6 +6,7 @@
 # Requiere: PowerShell 5 (compatible con W10 IoT LTSC recien instalado)
 # Ejecutar como: Administrador
 # SET-EXECUTIONPOLICY -EXECUTIONPOLICY UNRESTRICTED -SCOPE LocalMachine
+# iwr -useb https://christitus.com/win | iex
 # ==============================================================================
 #
 # CAMBIOS vs version anterior (2026-03-18):
