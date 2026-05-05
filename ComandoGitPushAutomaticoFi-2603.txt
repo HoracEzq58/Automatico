@@ -4,7 +4,7 @@ git add .
 git commit -m "ultimos cambios"
 git push origin HEAD:main
 
-# Fi-2603 - primer Commit (en MI COMPUTADORA) ** primero crear repositorio en git **
+# Fi-2603 - primer Commit Fi-2603 (en MI COMPUTADORA) ** primero crear repositorio en git **
 cd "D:\Biblioteca-Horace\Imagenes-Horacio\Fi-2603"
 git init
 git add .
@@ -12,7 +12,7 @@ git commit -m "Primer commit"
 git remote add origin https://github.com/HoracEzq58/Fi-2603.git
 git push origin HEAD:main
 
-# Fi-2603 - primer Commit (en MI COMPUTADORA)
+# Fi-2603 - primer Commit Automatico-Linux (en MI COMPUTADORA)
 cd "D:\Biblioteca-Horace\Documentos-Horacio-2\DocuHoraEzq\Automatico-Linux"
 git init
 git add .
@@ -20,8 +20,19 @@ git commit -m "Primer commit"
 git remote add origin https://github.com/HoracEzq58/Automatico-Linux.git
 git push origin HEAD:main
 
+# comandos git para actualizar Repo en GitHub Automatico (desde MI COMPUTADORA)
+cd "D:\Biblioteca-Horace\Documentos-Horacio-2\DocuHoraEzq\Automatico"
+git add .
+git commit -m "ultimos cambios"
+git push origin HEAD:main
 
-# # Fi-2603 actualizar - (en MI COMPUTADORA)
+# comandos git para actualizar Repo en GitHub Automatico-Linux (desde MI COMPUTADORA)
+cd "D:\Biblioteca-Horace\Documentos-Horacio-2\DocuHoraEzq\Automatico-Linux"
+git add .
+git commit -m "ultimos cambios"
+git push origin HEAD:main
+
+# comandos git para actualizar Repo en GitHub carpeta Fi-2603 - (desde MI COMPUTADORA)
 cd "D:\Biblioteca-Horace\Imagenes-Horacio\Fi-2603"
 git add .
 git commit -m "subir mas img"
@@ -37,6 +48,9 @@ Invoke-WebRequest "https://github.com/HoracEzq58/Fi-2603/archive/refs/heads/main
 Expand-Archive "C:\Users\Public\Pictures\Fi-2603.zip" -DestinationPath "C:\Users\Public\Pictures" -Force;
 Remove-Item "C:\Users\Public\Pictures\Fi-2603.zip";
 Rename-Item "C:\Users\Public\Pictures\Fi-2603-main" "Fi-2603"
+
+# para descarga carpeta completa desde PC CLIENTES (no tienen Git) de Automatico-Linux, ejecutar: 'descarga-automatico.sh'
+# para descarga carpeta completa desde PC CLIENTES (no tienen Git) de Fi-2603, ejecutar descarga-fondos.sh'
 
 # descargar solo un archivo:  en MI COMPUTADORA: MasterChef HEzqDaw o, en las PC notebook's de CLIENTES !!
 Invoke-WebRequest "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/SimilCPU-Z-Old-Machine.bat" -OutFile "$env:USERPROFILE\Downloads\SimilCPU-Z-Old-Machine.bat"

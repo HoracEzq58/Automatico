@@ -430,15 +430,82 @@ foreach ($svcName in $SERVICIOS_RED_PROTEGIDOS) {
 }
 Write-Log "--- [SECCION 10] Completada ---" "INFO" "Yellow"
 
-#######################################################
-# SECCION 11 - PREFETCH / SUPERFETCH
-#######################################################
+##############################################################
+# SECCION 11 - PREFETCH / SYSMAIN (INTELIGENTE v2) 05/05/2026
+##############################################################
 Write-Log "" "INFO" "White"
-Write-Log "--- SECCION 11: PREFETCH/SUPERFETCH ---" "INFO" "Yellow"
-$prefetchPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters"
-Set-ItemProperty -Path $prefetchPath -Name "EnablePrefetcher" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-Set-ItemProperty -Path $prefetchPath -Name "EnableSuperfetch" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-Write-Log "  [OK] Prefetch y Superfetch desactivados." "INFO" "Green"
+Write-Log "--- SECCION 11: PREFETCH / SYSMAIN (INTELIGENTE v2) ---" "INFO" "Yellow"
+
+try {
+    # --- Deteccion de disco del sistema ---
+    $particion   = Get-Partition -DriveLetter "C" -ErrorAction Stop
+    $disco       = Get-Disk -Number $particion.DiskNumber -ErrorAction Stop
+    $mediaType   = $disco.MediaType   # SSD / HDD / Unspecified
+    $busType     = $disco.BusType     # NVMe / SATA / USB / etc.
+
+    # --- Deteccion de RAM total ---
+    $ramGB = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
+
+    Write-Log "  Disco sistema : $($disco.FriendlyName)" "INFO" "Cyan"
+    Write-Log "  Tipo / Bus    : $mediaType / $busType"   "INFO" "Cyan"
+    Write-Log "  RAM total     : $ramGB GB"               "INFO" "Cyan"
+
+    $prefetchPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters"
+
+    # ============================
+    # Logica de decision
+    # ============================
+    # NVMe o SSD          -> ON siempre (disco rapido, SysMain no molesta)
+    # HDD con RAM >= 6 GB -> ON  (prefetch en RAM compensa disco lento)
+    # HDD con RAM <  6 GB -> OFF (carreta: disco es el cuello, SysMain compite)
+    # Desconocido         -> sin cambios
+
+    if ($mediaType -eq "SSD") {
+        # Cubre NVMe (busType = NVMe) y SATA SSD por igual
+        $activar   = $true
+        $motivo    = if ($busType -eq "NVMe") { "NVMe detectado" } else { "SSD SATA detectado" }
+    }
+    elseif ($mediaType -eq "HDD") {
+        if ($ramGB -ge 6) {
+            $activar = $true
+            $motivo  = "HDD con $ramGB GB RAM - prefetch en RAM conveniente"
+        }
+        else {
+            $activar = $false
+            $motivo  = "HDD con solo $ramGB GB RAM - SysMain genera presion en disco"
+        }
+    }
+    else {
+        $activar = $null   # null = no tocar nada
+        $motivo  = "Tipo de disco no identificado ($mediaType / $busType)"
+    }
+
+    # ============================
+    # Aplicacion de cambios
+    # ============================
+    if ($activar -eq $true) {
+        Set-ItemProperty -Path $prefetchPath -Name "EnablePrefetcher"  -Value 3 -Type DWord -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $prefetchPath -Name "EnableSuperfetch"  -Value 3 -Type DWord -ErrorAction SilentlyContinue
+        Set-Service  "SysMain" -StartupType Automatic -ErrorAction SilentlyContinue
+        Start-Service "SysMain"              -ErrorAction SilentlyContinue
+        Write-Log "  [OK] SysMain ACTIVADO  - $motivo" "INFO" "Green"
+    }
+    elseif ($activar -eq $false) {
+        Stop-Service "SysMain" -Force        -ErrorAction SilentlyContinue
+        Set-Service  "SysMain" -StartupType Disabled -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $prefetchPath -Name "EnablePrefetcher"  -Value 0 -Type DWord -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $prefetchPath -Name "EnableSuperfetch"  -Value 0 -Type DWord -ErrorAction SilentlyContinue
+        Write-Log "  [OK] SysMain DESACTIVADO - $motivo" "WARN" "Yellow"
+    }
+    else {
+        Write-Log "  [WARN] $motivo - sin cambios aplicados" "WARN" "Yellow"
+    }
+
+}
+catch {
+    Write-Log "  [ERROR] Seccion 11: $($_.Exception.Message)" "ERROR" "Red"
+}
+
 Write-Log "--- [SECCION 11] Completada ---" "INFO" "Yellow"
 
 #######################################################
@@ -703,10 +770,111 @@ foreach ($svcName in $SERVICIOS_RED_PROTEGIDOS) {
 Write-Log "--- [SECCION 18] Completada ---" "INFO" "Yellow"
 
 #######################################################
-# SECCION 19 - LLAMADO AL SCRIPT 4
+# SECCION 19 - AUTORAM: INSTALACION INTELIGENTE
 #######################################################
 Write-Log "" "INFO" "White"
-Write-Log "--- SECCION 19: LLAMADO AL SCRIPT 4 ---" "INFO" "Yellow"
+Write-Log "--- SECCION 19: AUTORAM - MONITOR INTELIGENTE DE RAM ---" "INFO" "Yellow"
+
+try {
+    $ramGB = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
+    Write-Log "  RAM detectada: $ramGB GB" "INFO" "Cyan"
+
+    $rutaAutomatico = "C:\Users\Public\Documents\Automatico"
+    $rutaConfig     = "$rutaAutomatico\autoram-config.json"
+    $rutaScript     = "$rutaAutomatico\AutoRAM-Monitor.ps1"
+    $nombreServicio = "AutoRAM-TuPcVeloz"
+
+    # ============================
+    # DECISION POR RAM
+    # ============================
+
+    if ($ramGB -ge 8) {
+        Write-Log "  [OK] $ramGB GB RAM - equipo suficiente. AutoRAM no necesario." "INFO" "Green"
+        # Por las dudas, si existia de una instalacion anterior, lo limpiamos
+        $svcExiste = Get-Service -Name $nombreServicio -ErrorAction SilentlyContinue
+        if ($svcExiste) {
+            & nssm stop  $nombreServicio | Out-Null
+            & nssm remove $nombreServicio confirm | Out-Null
+            Write-Log "  [OK] Servicio AutoRAM previo desinstalado (ya no necesario)." "INFO" "Yellow"
+        }
+    }
+    else {
+        # Definir perfil segun RAM
+        if ($ramGB -le 4) {
+            $perfil      = "agresivo"
+            $umbralPct   = 60
+            $intervaloSeg = 300   # 5 minutos
+            $cooldownSeg  = 600   # 10 minutos entre limpiezas
+        }
+        else {
+            # 5-7 GB
+            $perfil      = "moderado"
+            $umbralPct   = 70
+            $intervaloSeg = 600   # 10 minutos
+            $cooldownSeg  = 900   # 15 minutos entre limpiezas
+        }
+
+        Write-Log "  Perfil seleccionado: $perfil (umbral $umbralPct%, intervalo $($intervaloSeg/60) min)" "INFO" "Cyan"
+
+        # Crear autoram-config.json
+        $configObj = [PSCustomObject]@{
+            Perfil       = $perfil
+            UmbralPct    = $umbralPct
+            IntervaloSeg = $intervaloSeg
+            CooldownSeg  = $cooldownSeg
+            SmbTuning    = $false
+        }
+        $configObj | ConvertTo-Json | Set-Content -Path $rutaConfig -Encoding UTF8
+        Write-Log "  [OK] autoram-config.json creado en $rutaConfig" "INFO" "Green"
+
+        # Verificar que el script monitor existe
+        if (-not (Test-Path $rutaScript)) {
+            Write-Log "  [ERROR] No se encontro AutoRAM-Monitor.ps1 en $rutaScript" "ERROR" "Red"
+            throw "AutoRAM-Monitor.ps1 no encontrado"
+        }
+
+        # Instalar o reinstalar servicio NSSM
+        $pw7 = "C:\Program Files\PowerShell\7\pwsh.exe"
+
+        $svcExiste = Get-Service -Name $nombreServicio -ErrorAction SilentlyContinue
+        if ($svcExiste) {
+            & nssm stop $nombreServicio | Out-Null
+            Start-Sleep -Seconds 2
+            & nssm remove $nombreServicio confirm | Out-Null
+            Write-Log "  [OK] Servicio previo removido para reinstalar." "INFO" "Yellow"
+        }
+
+        & nssm install $nombreServicio $pw7 "-NonInteractive -ExecutionPolicy Bypass -File `"$rutaScript`""
+        & nssm set     $nombreServicio DisplayName "AutoRAM TuPcVeloz"
+        & nssm set     $nombreServicio Description  "Monitor inteligente de RAM - TuPcVeloz"
+        & nssm set     $nombreServicio Start SERVICE_AUTO_START
+        & nssm set     $nombreServicio AppStdout "C:\Users\Public\Documents\AutoTemp\AutoRAM-nssm.log"
+        & nssm set     $nombreServicio AppStderr "C:\Users\Public\Documents\AutoTemp\AutoRAM-nssm.log"
+        & nssm set     $nombreServicio AppRotateFiles 1
+        & nssm set     $nombreServicio AppRotateBytes 1048576
+        & nssm start   $nombreServicio
+
+        Start-Sleep -Seconds 3
+        $estado = (Get-Service -Name $nombreServicio -ErrorAction SilentlyContinue).Status
+        if ($estado -eq "Running") {
+            Write-Log "  [OK] Servicio AutoRAM-TuPcVeloz instalado y corriendo. Perfil: $perfil" "INFO" "Green"
+        }
+        else {
+            Write-Log "  [WARN] Servicio instalado pero estado: $estado - revisar log NSSM." "WARN" "Yellow"
+        }
+    }
+}
+catch {
+    Write-Log "  [ERROR] Seccion AutoRAM: $($_.Exception.Message)" "ERROR" "Red"
+}
+
+Write-Log "--- [SECCION 19] AutoRAM Completada ---" "INFO" "Yellow"
+
+#######################################################
+# SECCION 20 - LLAMADO AL SCRIPT 4
+#######################################################
+Write-Log "" "INFO" "White"
+Write-Log "--- SECCION 20: LLAMADO AL SCRIPT 4 ---" "INFO" "Yellow"
 
 $extDir    = "C:\Users\Public\Documents\Automatico\"
 $extScript = "4ExtraeNew-InstallAppsDesktop-Claude.ps1"
@@ -728,7 +896,7 @@ if (-not $LlamarScript4) {
     Write-Log "  [WARN] Script 4 no encontrado en: $extFull" "WARN" "Yellow"
     Write-Log "  Ejecutalo manualmente cuando estes listo." "INFO" "White"
 }
-Write-Log "--- [SECCION 19] Completada ---" "INFO" "Yellow"
+Write-Log "--- [SECCION 20] Completada ---" "INFO" "Yellow"
 
 # ==============================================================================
 # FIN DEL SCRIPT
