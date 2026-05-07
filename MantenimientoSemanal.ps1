@@ -17,7 +17,7 @@
 # Versión : 4
 # Cambios : - Kill switch: lee flag "Activo" de config.json. Si es false,
 #             el script termina silenciosamente sin ejecutar ningún módulo.
-#           - Vencimiento: lee campo "VenceEl" (formato yyyy-MM-dd) de
+#           - Vencimiento: lee campo "vence" (formato yyyy-MM-dd) de
 #             config.json. Si la fecha actual la supera, el script termina
 #             y envía Telegram avisando que el servicio venció en esa PC.
 #           - Blindaje NTFS: función Blindar-Config endurece permisos del
@@ -56,12 +56,18 @@ $logDir      = "C:\Users\Public\Documents\AutoTemp"
 $logFile     = "$logDir\MantenimientoSemanal_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 $fechaInicio = Get-Date
 
-# --- TELEGRAM ---
-$ConfigPath = "C:\Users\Public\Documents\Automatico\config.json"
-$Config = [System.IO.File]::ReadAllText($ConfigPath) | ConvertFrom-Json
-$TelegramToken  = $Config.TelegramToken
-$TelegramChatID = $Config.TelegramChatID
-
+# --- API TUPCVELOZ ---
+$ApiUrl = "https://api.tupcveloz.com/estado?cliente=$env:COMPUTERNAME"
+try {
+    $Config = Invoke-RestMethod -Uri $ApiUrl -Method Get -ErrorAction Stop
+} catch {
+    "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [WARN] No se pudo contactar la API TuPcVeloz. Mantenimiento cancelado." |
+        Out-File -FilePath $logFile -Append
+    exit 0
+}
+$TelegramToken  = $Config.telegram_token
+$TelegramChatID = $Config.telegram_chat_id
+ 
 # ------------------------------------------------------------------------------
 # SECCIÓN 1 — KILL SWITCH Y CONTROL DE VENCIMIENTO
 # ------------------------------------------------------------------------------
@@ -69,20 +75,20 @@ $TelegramChatID = $Config.TelegramChatID
 # Kill switch: si "Activo" es false, terminar silenciosamente
 
 $script:AvisoVencimiento = "" # Movido por recomendacion del Otro Yo de Claude el 09/04/2026 15.47 hs - Se llena si faltan 14 dias o menos para vencer.
-if ($Config.PSObject.Properties.Name -contains 'Activo') {
-    if ($Config.Activo -eq $false) {
+if ($Config.PSObject.Properties.Name -contains 'activo') {
+    if ($Config.activo -eq $false) {
         $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        "$ts [INFO] Servicio inactivo (Activo=false en config.json). Mantenimiento cancelado." |
+        "$ts [INFO] Servicio inactivo (activo=false en config.json). Mantenimiento cancelado." |
             Out-File -FilePath $logFile -Append
         exit 0
     }
 }
 
-# Control de vencimiento: si "VenceEl" existe, evaluar vencido o proximo a vencer
-if ($Config.PSObject.Properties.Name -contains 'VenceEl') {
+# Control de vencimiento: si "vence" existe, evaluar vencido o proximo a vencer
+if ($Config.PSObject.Properties.Name -contains 'vence') {
     try {
         # Parseo robusto: split manual para evitar dependencia de cultura regional
-        $partes = $Config.VenceEl -split "-"
+        $partes = $Config.vence -split "-"
         $fechaVence = [datetime]::new([int]$partes[0], [int]$partes[1], [int]$partes[2])
         $diasRestantes  = ([math]::Floor(($fechaVence - (Get-Date)).TotalDays))
         $fechaVenceTxt  = $fechaVence.ToString("dd/MM/yyyy")
@@ -90,7 +96,7 @@ if ($Config.PSObject.Properties.Name -contains 'VenceEl') {
         if ((Get-Date) -gt $fechaVence) {
             # --- VENCIDO: avisar al cliente y a TuPcVeloz, luego salir ---
             $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-            "$ts [WARN] Servicio vencido el $($Config.VenceEl) en equipo $env:COMPUTERNAME." |
+            "$ts [WARN] Servicio vencido el $($Config.vence) en equipo $env:COMPUTERNAME." |
                 Out-File -FilePath $logFile -Append
 
             # Aviso Telegram a TuPcVeloz
@@ -262,7 +268,7 @@ Add-Type -AssemblyName System.Drawing
 
     } catch {
         $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        "$ts [WARN] No se pudo parsear VenceEl='$($Config.VenceEl)'. Formato esperado: yyyy-MM-dd. Continuando." |
+        "$ts [WARN] No se pudo parsear vence='$($Config.vence)'. Formato esperado: yyyy-MM-dd. Continuando." |
             Out-File -FilePath $logFile -Append
     }
 }

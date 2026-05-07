@@ -1,10 +1,10 @@
-# comandos git para actualizar carpeta Automatico (en MI COMPUTADORA)
+# comandos git para actualizar carpeta Automatico (desde MI COMPUTADORA)
 cd "D:\Biblioteca-Horace\Documentos-Horacio-2\DocuHoraEzq\Automatico"
 git add .
 git commit -m "ultimos cambios"
 git push origin HEAD:main
 
-# Fi-2603 - primer Commit Fi-2603 (en MI COMPUTADORA) ** primero crear repositorio en git **
+# Fi-2603 - primer Commit Fi-2603 (desde MI COMPUTADORA) ** primero crear repositorio en git **
 cd "D:\Biblioteca-Horace\Imagenes-Horacio\Fi-2603"
 git init
 git add .
@@ -12,7 +12,7 @@ git commit -m "Primer commit"
 git remote add origin https://github.com/HoracEzq58/Fi-2603.git
 git push origin HEAD:main
 
-# Fi-2603 - primer Commit Automatico-Linux (en MI COMPUTADORA)
+# Fi-2603 - primer Commit Automatico-Linux (desde MI COMPUTADORA)
 cd "D:\Biblioteca-Horace\Documentos-Horacio-2\DocuHoraEzq\Automatico-Linux"
 git init
 git add .
@@ -38,7 +38,7 @@ git add .
 git commit -m "subir mas img"
 git push origin HEAD:main
 
-# descargar carpeta completa si lo hago (en MI COMPUTADORA: MasterChef HEzqDaw)
+# descargar carpeta completa si lo hago (desde MI COMPUTADORA: MasterChef HEZQDAW)
 git clone https://github.com/HoracEzq58/Fi-2603.git "C:\Users\Public\Pictures\Fi-2603"
 git clone https://github.com/HoracEzq58/Automatico.git "C:\Users\Public\Documents\Automatico"
 
@@ -50,7 +50,7 @@ Remove-Item "C:\Users\Public\Pictures\Fi-2603.zip";
 Rename-Item "C:\Users\Public\Pictures\Fi-2603-main" "Fi-2603"
 
 # para descarga carpeta completa desde PC CLIENTES (no tienen Git) de Automatico-Linux, ejecutar: 'descarga-automatico.sh'
-# para descarga carpeta completa desde PC CLIENTES (no tienen Git) de Fi-2603, ejecutar descarga-fondos.sh'
+# para descarga carpeta completa desde PC CLIENTES (no tienen Git) de Fi-2603, ejecutar 'descarga-fondos.sh'
 
 # descargar solo un archivo:  en MI COMPUTADORA: MasterChef HEzqDaw o, en las PC notebook's de CLIENTES !!
 Invoke-WebRequest "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/SimilCPU-Z-Old-Machine.bat" -OutFile "$env:USERPROFILE\Downloads\SimilCPU-Z-Old-Machine.bat"

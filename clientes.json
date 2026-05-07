@@ -1,0 +1,75 @@
+{
+  "cucurucho-945GZM-S2": {
+    "nombre": "PC Cucurucho",
+    "activo": true,
+    "vence": "2026-07-30",
+    "telegram_chat_id": "7448521576"
+  },
+  "mastermac-iMac": {
+    "nombre": "iMac Linux",
+    "activo": true,
+    "vence": "2026-07-30",
+    "telegram_chat_id": "7448521576"
+  },
+  "DESKTOP-EZQUERR": {
+    "nombre": "PC-Ezquerras",
+    "activo": true,
+    "vence": "2026-07-30",
+    "telegram_chat_id": "7448521576"
+  },
+  "DESKTOP-HEZQDAW": {
+    "nombre": "MasterChef-PC",
+    "activo": true,
+    "vence": "2026-07-30",
+    "telegram_chat_id": "7448521576"
+  },
+  "LAPTOP-CARMEN": {
+    "nombre": "Notebook CARMEN",
+    "activo": true,
+    "vence": "2026-07-30",
+    "telegram_chat_id": "7448521576"
+  },
+  "DESKTOP-LOSGARC": {
+    "nombre": "PC-Garcias",
+    "activo": true,
+    "vence": "2026-07-30",
+    "telegram_chat_id": "7448521576"
+  },
+  "DESKTOP-SAPALUG": {
+    "nombre": "Pc-Sapalugrafa-Graciela-Caballero",
+    "activo": true,
+    "vence": "2026-07-30",
+    "telegram_chat_id": "7448521576"
+  },
+  "LAPTOP-ALFREDO": {
+    "nombre": "Notebook Alfredinho",
+    "activo": true,
+    "vence": "2026-07-30",
+    "telegram_chat_id": "7448521576"
+  },
+  "DESKTOP-CIRKUIT": {
+    "nombre": "PC-Cirkuit",
+    "activo": true,
+    "vence": "2026-07-30",
+    "telegram_chat_id": "7448521576"
+  },
+  "DESKTOP-KELIXSU": {
+    "nombre": "Pc-Nestor-Tarbuch",
+    "activo": true,
+    "vence": "2026-07-30",
+    "telegram_chat_id": "7448521576"
+  },
+  "LAPTOP-GRACE": {
+    "nombre": "Notebook-Grace-Zampa",
+    "activo": true,
+    "vence": "2026-07-30",
+    "telegram_chat_id": "7448521576"
+  },
+  "DESKTOP-SUPERLI": {
+    "nombre": "Pc-Lili-de-Flores",
+    "activo": true,
+    "vence": "2026-07-30",
+    "telegram_chat_id": "7448521576"
+  }
+  
+}
