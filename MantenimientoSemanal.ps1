@@ -1163,27 +1163,6 @@ function Actualizar-PaquetesPostergados {
 }
 
 # ------------------------------------------------------------------------------
-# FUNCIÓN: BLINDAJE NTFS DE CONFIG.JSON
-# ------------------------------------------------------------------------------
-
-function Blindar-Config {
-    param([string]$Ruta)
-    try {
-        # Deshabilitar herencia y quitar permisos heredados
-        & icacls $Ruta /inheritance:d /T /Q 2>&1 | Out-Null
-        # Quitar acceso a usuarios normales
-        & icacls $Ruta /remove "BUILTIN\Users" /T /Q 2>&1 | Out-Null
-        & icacls $Ruta /remove "NT AUTHORITY\Authenticated Users" /T /Q 2>&1 | Out-Null
-        # Asegurar que SYSTEM y Administradores conservan lectura
-        & icacls $Ruta /grant "NT AUTHORITY\SYSTEM:(R)" /Q 2>&1 | Out-Null
-        & icacls $Ruta /grant "BUILTIN\Administrators:(R)" /Q 2>&1 | Out-Null
-        Write-Log "config.json blindado con permisos NTFS restringidos." "OK"
-    } catch {
-        Write-Log "No se pudo blindar config.json: $_" "WARN"
-    }
-}
-
-# ------------------------------------------------------------------------------
 # EJECUCIÓN PRINCIPAL
 # ------------------------------------------------------------------------------
 
@@ -1256,11 +1235,4 @@ try {
     Actualizar-PaquetesPostergados
 } catch {
     Write-Log "Error en Modulo 7 (paquetes postergados): $_" "WARN"
-}
-
-# Blindaje NTFS del config.json (idempotente, corre siempre al final)
-try {
-    Blindar-Config -Ruta $ConfigPath
-} catch {
-    Write-Log "Error en Blindar-Config: $_" "WARN"
 }
