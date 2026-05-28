@@ -1,0 +1,1228 @@
+[
+  {
+    "NombreOriginal": "Google Chrome",
+    "NombreChoco": "googlechrome",
+    "Categoria": "Navegadores",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Mozilla Firefox.*",
+    "NombreChoco": "firefox",
+    "Categoria": "Navegadores",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft OneNote",
+    "NombreChoco": "",
+    "Categoria": "Productividad",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Opera Stable",
+    "NombreChoco": "opera",
+    "Categoria": "Navegadores",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Office 365",
+    "NombreChoco": "microsoft-office-deployment",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "LibreOffice 7.5.3.2",
+    "NombreChoco": "libreoffice-fresh",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "WPS Office",
+    "NombreChoco": "wps-office-free",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Adobe Acrobat Reader DC",
+    "NombreChoco": "adobereader",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Foxit Reader",
+    "NombreChoco": "foxitreader",
+    "Categoria": "Oficina",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Sumatra PDF",
+    "NombreChoco": "sumatrapdf",
+    "Categoria": "Oficina",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "VLC media player",
+    "NombreChoco": "vlc",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "iTunes",
+    "NombreChoco": "itunes",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Spotify",
+    "NombreChoco": "spotify",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Zoom",
+    "NombreChoco": "zoom",
+    "Categoria": "Comunicación",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Teams",
+    "NombreChoco": "microsoft-teams",
+    "Categoria": "Comunicación",
+    "EsBloatware": true,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Skype",
+    "NombreChoco": "skype",
+    "Categoria": "Comunicación",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Slack",
+    "NombreChoco": "slack",
+    "Categoria": ".Concurrentación",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Discord",
+    "NombreChoco": "discord",
+    "Categoria": "Comunicación",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "_comment": "choco_mapping_db.json",
+    "NombreOriginal": "7-Zip.*",
+    "NombreChoco": "7zip",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "WinRAR",
+    "NombreChoco": "winrar",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "PeaZip",
+    "NombreChoco": "peazip",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Notepad\\+\\+",
+    "NombreChoco": "notepadplusplus",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Visual Studio Code",
+    "NombreChoco": "vscode",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Sublime Text 3",
+    "NombreChoco": "sublimetext3",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Git",
+    "NombreChoco": "git",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Python",
+    "NombreChoco": "python",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Java SE Development Kit",
+    "NombreChoco": "jdk8",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Node.js",
+    "NombreChoco": "nodejs",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Docker Desktop",
+    "NombreChoco": "docker-desktop",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Postman",
+    "NombreChoco": "postman",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Edge",
+    "NombreChoco": "microsoft-edge",
+    "Categoria": "Navegadores",
+    "EsBloatware": true,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft 365",
+    "NombreChoco": "office365proplus",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "WhatsApp Desktop",
+    "NombreChoco": "whatsapp",
+    "Categoria": "Comunicacion",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Visual Studio Community 2022",
+    "NombreChoco": "visualstudio2022community",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Java Runtime Environment",
+    "NombreChoco": "jre8",
+    "Categoria": "Utilidades",
+    "EsBloatware": true,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Adobe Photoshop",
+    "NombreChoco": "adobe-photoshop-cc",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Adobe Illustrator",
+    "NombreChoco": "adobe-illustrator-cc",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "GIMP",
+    "NombreChoco": "gimp",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Audacity",
+    "NombreChoco": "audacity",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "OBS Studio",
+    "NombreChoco": "obs-studio",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Steam",
+    "NombreChoco": "steam",
+    "Categoria": "Juegos",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Epic Games Launcher",
+    "NombreChoco": "epicgameslauncher",
+    "Categoria": "Juegos",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Avast Antivirus",
+    "NombreChoco": "avast",
+    "Categoria": "Seguridad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "AVG Antivirus",
+    "NombreChoco": "avg",
+    "Categoria": "Seguridad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Malwarebytes",
+    "NombreChoco": "malwarebytes",
+    "Categoria": "Seguridad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "CCleaner",
+    "NombreChoco": "ccleaner",
+    "Categoria": "Utilidades",
+    "EsBloatware": true,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "TeamViewer",
+    "NombreChoco": "teamviewer",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "AnyDesk",
+    "NombreChoco": "anydesk",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Dropbox",
+    "NombreChoco": "dropbox",
+    "Categoria": "Cloud",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Google Drive",
+    "NombreChoco": "google-drive-file-stream",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft OneDrive",
+    "NombreChoco": "onedrive",
+    "Categoria": "Utilidades",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Disney+",
+    "NombreChoco": "disneyplus",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Netflix",
+    "NombreChoco": "netflix",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Kindle",
+    "NombreChoco": "kindle",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "WinZip",
+    "NombreChoco": "winzip",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "FileZilla",
+    "NombreChoco": "filezilla",
+    "Categoria": "Redes",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "PuTTY",
+    "NombreChoco": "putty",
+    "Categoria": "Redes",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "WinSCP",
+    "NombreChoco": "winscp",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft SQL Server Management Studio",
+    "NombreChoco": "sql-server-management-studio",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "MySQL",
+    "NombreChoco": "mysql",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "PostgreSQL",
+    "NombreChoco": "postgresql",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "MongoDB",
+    "NombreChoco": "mongodb",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "VMware Workstation",
+    "NombreChoco": "vmwareworkstation",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "VirtualBox",
+    "NombreChoco": "virtualbox",
+    "Categoria": "Virtualización",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "XAMPP",
+    "NombreChoco": "xampp",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "OneNote",
+    "NombreChoco": "onenote",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft To Do",
+    "NombreChoco": "microsoft-todo",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Trello",
+    "NombreChoco": "trello",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Notion",
+    "NombreChoco": "notion",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Evernote",
+    "NombreChoco": "evernote",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft PowerToys",
+    "NombreChoco": "powertoys",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "NVIDIA GeForce Experience",
+    "NombreChoco": "geforce-experience",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "AMD Radeon Software",
+    "NombreChoco": "amd-ryzen-master",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Adobe Creative Cloud",
+    "NombreChoco": "adobe-creative-cloud",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "FreeOffice",
+    "NombreChoco": "softmaker-freeoffice",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Adobe Premiere Pro",
+    "NombreChoco": "adobe-premiere-pro-cc",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "League of Legends",
+    "NombreChoco": "leagueoflegends",
+    "Categoria": "Juegos",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Blender",
+    "NombreChoco": "blender",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "JetBrains IntelliJ IDEA Community",
+    "NombreChoco": "intellijidea-community",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Eclipse IDE",
+    "NombreChoco": "eclipse",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Office",
+    "NombreChoco": "microsoft-office-deployment-tool",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "LibreOffice",
+    "NombreChoco": "libreoffice",
+    "Categoria": "Oficina",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Avast Free Antivirus",
+    "NombreChoco": "avastfreeantivirus",
+    "Categoria": "Seguridad",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "McAfee Security Scan Plus",
+    "NombreChoco": "mcafee-security-scan-plus",
+    "Categoria": "Seguridad",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Norton Security",
+    "NombreChoco": "norton-security",
+    "Categoria": "Seguridad",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Dell SupportAssist",
+    "NombreChoco": "dell-supportassist",
+    "Categoria": "Utilidades",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "HP Support Solutions Framework",
+    "NombreChoco": "hp-support-solutions-framework",
+    "Categoria": "Utilidades",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Lenovo Vantage",
+    "NombreChoco": "lenovo-vantage",
+    "Categoria": "Utilidades",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Candy Crush Saga",
+    "NombreChoco": "candycrushsaga",
+    "Categoria": "Juegos",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Microsoft Solitaire Collection",
+    "NombreChoco": "microsoft-solitaire-collection",
+    "Categoria": "Juegos",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Xbox",
+    "NombreChoco": "xbox-app",
+    "Categoria": "Juegos",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "TikTok",
+    "NombreChoco": "tiktok",
+    "Categoria": "Multimedia",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Facebook",
+    "NombreChoco": "facebook",
+    "Categoria": "Multimedia",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Google Drive",
+    "NombreChoco": "google-drive",
+    "Categoria": "Cloud",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Inkscape",
+    "NombreChoco": "inkscape",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Visual C++ 2015-2022 Redistributable (x86)",
+    "NombreChoco": "vcredist-all",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Microsoft Teams",
+    "NombreChoco": "teams",
+    "Categoria": "Comunicacion",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Paint.NET",
+    "NombreChoco": "paint.net",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "IrfanView",
+    "NombreChoco": "irfanview",
+    "Categoria": "Graficos",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Java Development Kit",
+    "NombreChoco": "openjdk",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Google Drive",
+    "NombreChoco": "googledrive",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Telegram Desktop",
+    "NombreChoco": "telegram",
+    "Categoria": "Comunicación",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "HandBrake",
+    "NombreChoco": "handbrake",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Greenshot",
+    "NombreChoco": "greenshot",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "ShareX",
+    "NombreChoco": "sharex",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "K-Lite Codec Pack",
+    "NombreChoco": "klitecodecpack-full",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "McAfee LiveSafe",
+    "NombreChoco": "mcafee",
+    "Categoria": "Seguridad",
+    "EsBloatware": true,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Avast Free Antivirus",
+    "NombreChoco": "avast-free-antivirus",
+    "Categoria": "Seguridad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "AVG AntiVirus FREE",
+    "NombreChoco": "avg-antivirus-free",
+    "Categoria": "Seguridad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Xbox",
+    "NombreChoco": null,
+    "Categoria": "Juegos",
+    "EsBloatware": false,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Amazon Prime Video",
+    "NombreChoco": "primevideo",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Opera GX Browser",
+    "NombreChoco": "opera-gx",
+    "Categoria": "Navegadores",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Brave Browser",
+    "NombreChoco": "brave",
+    "Categoria": "Navegadores",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "VMware Workstation Player",
+    "NombreChoco": "vmware-workstation-player",
+    "Categoria": "Virtualización",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "TreeSize Free",
+    "NombreChoco": "treesizefree",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Rufus",
+    "NombreChoco": "rufus",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Etcher",
+    "NombreChoco": "etcher",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Krita",
+    "NombreChoco": "krita",
+    "Categoria": "Graficos",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Autodesk AutoCAD",
+    "NombreChoco": "autocad",
+    "Categoria": "Graficos",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Visio",
+    "NombreChoco": "visio",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Project",
+    "NombreChoco": "project",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Revo Uninstaller",
+    "NombreChoco": "revo-uninstaller",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Wireshark",
+    "NombreChoco": "wireshark",
+    "Categoria": "Redes",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Battle.net",
+    "NombreChoco": "battle.net",
+    "Categoria": "Juegos",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Origin",
+    "NombreChoco": "origin",
+    "Categoria": "Juegos",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Ubisoft Connect",
+    "NombreChoco": "uplay",
+    "Categoria": "Juegos",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "TeraCopy",
+    "NombreChoco": "teracopy",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Everything",
+    "NombreChoco": "everything",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft .NET Runtime",
+    "NombreChoco": "dotnet-runtime",
+    "Categoria": "Sistema",
+    "EsBloatware": false,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Microsoft .NET Desktop Runtime",
+    "NombreChoco": "dotnet-desktopruntime",
+    "Categoria": "Sistema",
+    "EsBloatware": false,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Adobe Creative Cloud",
+    "NombreChoco": "adobecreativecloud",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Adobe Photoshop",
+    "NombreChoco": "photoshop",
+    "Categoria": "Graficos",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Adobe Illustrator",
+    "NombreChoco": "illustrator",
+    "Categoria": "Graficos",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Adobe Premiere Pro",
+    "NombreChoco": "premierepro",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Plex Media Server",
+    "NombreChoco": "plexmediaserver",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "KeePassXC",
+    "NombreChoco": "keepassxc",
+    "Categoria": "Seguridad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Bitwarden",
+    "NombreChoco": "bitwarden",
+    "Categoria": "Seguridad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Office Profesional Plus 2019",
+    "NombreChoco": "office2019proplus",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Adobe Photoshop 2024",
+    "NombreChoco": "adobe-photoshop",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Java SE Development Kit 20",
+    "NombreChoco": "jdk",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Android Studio",
+    "NombreChoco": "androidstudio",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "BlueStacks",
+    "NombreChoco": "bluestacks",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Outlook",
+    "NombreChoco": "office-outlook",
+    "Categoria": "Comunicación",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Power BI Desktop",
+    "NombreChoco": "powerbi",
+    "Categoria": "Productividad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Visual C++ Redistributable 2013",
+    "NombreChoco": "vcredist2013",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Microsoft Visual C++ Redistributable 2017",
+    "NombreChoco": "vcredist2017",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Microsoft Visual C++ Redistributable 2019",
+    "NombreChoco": "vcredist2019",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "Microsoft Visual C++ Redistributable 2022",
+    "NombreChoco": "vcredist2022",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": true
+  },
+  {
+    "NombreOriginal": "AutoHotkey",
+    "NombreChoco": "autohotkey",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "CPU-Z",
+    "NombreChoco": "cpu-z",
+    "Categoria": "Diagnóstico",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "HWMonitor",
+    "NombreChoco": "hwmonitor",
+    "Categoria": "Diagnóstico",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "K-Lite Codec Pack",
+    "NombreChoco": "k-litecodecpackfull",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Mozilla Thunderbird",
+    "NombreChoco": "thunderbird",
+    "Categoria": "Oficina",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "qBittorrent",
+    "NombreChoco": "qbittorrent",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Office 365",
+    "NombreChoco": "office365business",
+    "Categoria": "Oficina",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Microsoft Visual Studio Installer",
+    "NombreChoco": "vscode.install",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Core Temp.*",
+    "NombreChoco": "coretemp",
+    "Categoria": "Diagnóstico",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Speccy",
+    "NombreChoco": "speccy",
+    "Categoria": "Diagnóstico",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Glary Utilities",
+    "NombreChoco": "glaryutilities",
+    "Categoria": "Utilidades",
+    "EsBloatware": true,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "FastStone Image Viewer",
+    "NombreChoco": "faststone.image.viewer",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Ventoy",
+    "NombreChoco": "ventoy",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "AnyDesk",
+    "NombreChoco": "anydesk.install",
+    "Categoria": "Redes",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Sublime Text",
+    "NombreChoco": "sublimetext4",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "WinDirStat",
+    "NombreChoco": "windirstat",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "KeePass",
+    "NombreChoco": "keepass",
+    "Categoria": "Seguridad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "CrystalDiskInfo",
+    "NombreChoco": "crystaldiskinfo",
+    "Categoria": "Diagnóstico",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "CMake",
+    "NombreChoco": "cmake",
+    "Categoria": "Desarrollo",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Figma",
+    "NombreChoco": "figma",
+    "Categoria": "Diseño",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Calibre",
+    "NombreChoco": "calibre",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "GnuPG",
+    "NombreChoco": "gnupg",
+    "Categoria": "Seguridad",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "OpenShot Video Editor",
+    "NombreChoco": "openshot",
+    "Categoria": "Multimedia",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Nmap",
+    "NombreChoco": "nmap",
+    "Categoria": "Redes",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "Tor Browser",
+    "NombreChoco": "tor-browser",
+    "Categoria": "Navegadores",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "LocalSend.*",
+    "NombreChoco": "localsend",
+    "Categoria": "Utilidades",
+    "EsBloatware": false,
+    "Excluir": false
+  },
+  {
+    "NombreOriginal": "PowerShell 7-x64",
+    "NombreChoco": "powershell-core",
+    "Categoria": "Sistema",
+    "EsBloatware": false,
+    "Excluir": true
+  }
+]

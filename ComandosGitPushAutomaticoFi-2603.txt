@@ -1,9 +1,3 @@
-# comandos git para actualizar carpeta Automatico (desde MI COMPUTADORA)
-cd "D:\Biblioteca-Horace\Documentos-Horacio-2\DocuHoraEzq\Automatico"
-git add .
-git commit -m "ultimos cambios"
-git push origin HEAD:main
-
 # Fi-2603 - primer Commit Fi-2603 (desde MI COMPUTADORA) ** primero crear repositorio en git **
 cd "D:\Biblioteca-Horace\Imagenes-Horacio\Fi-2603"
 git init
@@ -19,6 +13,8 @@ git add .
 git commit -m "Primer commit"
 git remote add origin https://github.com/HoracEzq58/Automatico-Linux.git
 git push origin HEAD:main
+
+========================================================================
 
 # comandos git para actualizar Repo en GitHub Automatico (desde MI COMPUTADORA)
 cd "D:\Biblioteca-Horace\Documentos-Horacio-2\DocuHoraEzq\Automatico"
@@ -54,3 +50,8 @@ Rename-Item "C:\Users\Public\Pictures\Fi-2603-main" "Fi-2603"
 
 # descargar solo un archivo:  en MI COMPUTADORA: MasterChef HEzqDaw o, en las PC notebook's de CLIENTES !!
 Invoke-WebRequest "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/SimilCPU-Z-Old-Machine.bat" -OutFile "$env:USERPROFILE\Downloads\SimilCPU-Z-Old-Machine.bat"
+
+# descargar solo un archivo: MantenimientoSemanal.ps1 en MI COMPUTADORA: en las PC notebook's de CLIENTES !!
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/MantenimientoSemanal.ps1" -OutFile "C:\Users\Public\Documents\Automatico\MantenimientoSemanal.ps1"
+
+Remove-Item "C:\Users\Public\Documents\Automatico\config.json" -Force

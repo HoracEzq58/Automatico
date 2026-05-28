@@ -1,8 +1,8 @@
 # ==============================================================================
-# Nombre Script: "2RenameLaptop-Desktop-Claude.ps1" version 2
-# Basado en: "2RenameLaptop-Desktop-Claude.ps1" version 1
-# Revisado y corregido por: Claude (Anthropic) - 2026-03-10
-# Requiere: PowerShell 7 | Administrador | W10 IoT LTSC
+# Nombre Script: "2RenameLaptop-Desktop-Claude.ps1" version 4
+# Basado en: "2RenameLaptop-Desktop-Claude.ps1" version 3
+# Revisado y corregido por: Claude (Anthropic) - 2026-05-28
+# Requiere: PowerShell 7 | Administrador | W10/W11 IoT LTSC
 # ==============================================================================
 #
 # PROBLEMAS ENCONTRADOS Y CORREGIDOS vs v1:
@@ -24,7 +24,22 @@
 #          mezclados, confuso para diagnostico.
 #          CORRECCION: Renombrados coherentemente como SECCION A y SECCION B.
 #
-#  Version 3 se agregaron mas tipos de chasis para LAPTOP- en seccion 3 el 19/03/2026  
+#  Version 3: se agregaron mas tipos de chasis para LAPTOP- en seccion 3 el 19/03/2026
+#
+# CAMBIOS v4 (2026-05-28):
+#
+#  [BUG 3] Get-CimInstance Win32_SystemEnclosure falla con "No mapping between
+#          account names and security IDs was done" en equipos donde el rename
+#          de usuario (Seccion 2) ocurrio en la misma sesion PowerShell.
+#          CAUSA: Aunque Get-CimInstance no usa WMI remoto, comparte el token
+#          de seguridad de la sesion. Post-rename de usuario, ese token queda
+#          con el SID del usuario anterior y CIM lo rechaza igual que WMI.
+#          CORRECCION: El ChassisType se detecta AL INICIO del script, antes
+#          de que ocurra cualquier rename. Se guarda en $script:ChassisPrefix
+#          como variable de script. La Seccion 3 usa ese valor cacheado en
+#          lugar de hacer una nueva consulta CIM/WMI post-rename.
+#          Caso borde cubierto: si la deteccion inicial falla (hardware muy
+#          viejo sin BIOS WMI), se aplica fallback DESKTOP- con log de aviso.
 # ===================================================================================
 
 # ===================================================================================
@@ -85,7 +100,7 @@ $LlamarScript3 = $true    # $true  = llama al Script 3 al finalizar (normal)
 # ==============================================================================
 
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  2RenameLaptop-Desktop-Claude-v2.ps1  INICIO" "INFO" "Magenta"
+Write-Log "  2RenameLaptop-Desktop-Claude-v4.ps1  INICIO" "INFO" "Magenta"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Usuario  : $env:USERNAME en $env:COMPUTERNAME" "INFO" "Cyan"
 Write-Log "PS Version: $($PSVersionTable.PSVersion)" "INFO" "Cyan"
@@ -107,6 +122,23 @@ if (-not $isAdmin) {
     exit 1
 }
 Write-Log "Administrador: OK" "INFO" "Green"
+
+# ==============================================================================
+# DETECCION DE CHASIS - Se hace AL INICIO, antes de cualquier rename de usuario
+# BUG CORREGIDO v4: Get-CimInstance falla post-rename porque el token SID de la
+# sesion queda invalido. Cacheando aqui el resultado se evita el problema.
+# ==============================================================================
+$script:ChassisPrefix = "DESKTOP-"   # fallback por defecto
+try {
+    $chassisObj   = Get-CimInstance -ClassName Win32_SystemEnclosure -ErrorAction Stop
+    $chassisTypes = $chassisObj.ChassisTypes
+    $laptopTypes  = @(8, 9, 10, 11, 12, 14, 18, 21, 30, 31, 32)
+    $esLaptop     = $chassisTypes | Where-Object { $_ -in $laptopTypes }
+    $script:ChassisPrefix = if ($esLaptop) { "LAPTOP-" } else { "DESKTOP-" }
+    Write-Log "Chasis detectado al inicio: $($chassisTypes -join ', ') -> $($script:ChassisPrefix)" "INFO" "Cyan"
+} catch {
+    Write-Log "[WARN] No se pudo detectar chasis al inicio: $_. Se usara DESKTOP- como fallback." "WARN" "Yellow"
+}
 
 # ==============================================================================
 # SECCION 1 - INSTALAR OFFICE LTSC 2021
@@ -255,23 +287,13 @@ if ($currentName -in $validFormats) {
 } else {
     Write-Log "  Nombre actual: $currentName -> necesita cambio" "INFO" "Yellow"
 
-    # --- Detectar tipo de chasis via registro (no usa WMI, evita problema de SID) ---
-    # Tipos laptop/portatil/tablet segun Win32_SystemEnclosure ChassisTypes:
-    #   8=Portatil, 9=Notebook, 10=Handheld, 14=Sub-Notebook
-    #   30=Tablet, 31=Convertible, 32=Detachable (modernos)
-    $chassisPrefix = "DESKTOP-"
-    try {
-        # Get-CimInstance no tiene el problema de SID (usa DCOM local, no WMI remoto)
-        # pero para mayor seguridad usamos el registro directamente
-        $chassis     = Get-CimInstance -ClassName Win32_SystemEnclosure -ErrorAction Stop
-        $chassisTypes = $chassis.ChassisTypes
-		$laptopTypes  = @(8, 9, 10, 11, 12, 14, 18, 21, 30, 31, 32)	
-		$esLaptop     = $chassisTypes | Where-Object { $_ -in $laptopTypes }
-		$chassisPrefix = if ($esLaptop) { "LAPTOP-" } else { "DESKTOP-" }
-		Write-Log "  Tipos de chasis detectados: $($chassisTypes -join ', ') -> $chassisPrefix" "INFO" "Cyan"
-    } catch {
-        Write-Log "  [WARN] No se pudo detectar chasis: $_. Usando DESKTOP-." "WARN" "Yellow"
-    }
+    # --- Tipo de chasis: usar valor cacheado al inicio del script (v4) ---
+    # BUG CORREGIDO v4: NO se vuelve a consultar CIM/WMI aqui porque post-rename
+    # de usuario el token SID de la sesion queda invalido y la consulta falla.
+    # El valor fue detectado al inicio en $script:ChassisPrefix cuando el token
+    # todavia estaba limpio.
+    $chassisPrefix = $script:ChassisPrefix
+    Write-Log "  Tipo de chasis (cacheado al inicio): $chassisPrefix" "INFO" "Cyan"
 
     # --- Generar y validar nuevo nombre ---
     $newComputerName = "$chassisPrefix$userPrefix"
@@ -318,7 +340,7 @@ Write-Log "--- [SECCION 3] Completada ---" "INFO" "Yellow"
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  2RenameLaptop-Desktop-Claude-v2.ps1  FIN" "INFO" "Green"
+Write-Log "  2RenameLaptop-Desktop-Claude-v4.ps1  FIN" "INFO" "Green"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Rename OK  : $renameOK" "INFO" "Cyan"
 Write-Log "Log        : $global:LogFile" "INFO" "Cyan"
