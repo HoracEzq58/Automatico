@@ -1,4 +1,4 @@
 clientes.json
-Instalar-Servicio.ps1
-Desinstalar-Servicio.ps1
+Instalar_ServicioMS.bat
+Desinstalar_ServicioMS.bat
 Renovar-Servicio-MantSem.ps1
