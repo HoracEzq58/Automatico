@@ -164,7 +164,7 @@ function Install-ChocoConReintentos {
 # ==============================================================================
 # INTERRUPTORES - Modificar segun necesidad antes de ejecutar
 # ==============================================================================
-$LlamarScript5 = $true    # $true  = llama al Script 5 al finalizar (normal)
+$LlamarScript5 = $false    # $true  = llama al Script 5 al finalizar (normal)
                            # $false = termina sin llamar al Script 5 (debug)
 # ==============================================================================
 
