@@ -3,8 +3,18 @@
 # Basado en: "3TuPcVolaraClaude.ps1"	version 2
 # Revisado y corregido por: Claude (Anthropic) - 2026-03-10
 # Actualizado por: Claude (Anthropic) - 2026-03-16
+# Actualizado por: Claude (Anthropic) - 2026-06-02
 # Requiere: PowerShell 7 | Administrador | W10 IoT LTSC
 # ==============================================================================
+#
+# CAMBIOS 2026-06-02 (manteniendo v3):
+#
+#  [SECCION 19] Agregada verificacion de nssm antes de instalar servicio AutoRAM:
+#               - Si nssm no esta en PATH, intenta instalarlo via Chocolatey
+#               - Choco ya garantizado por Script 1 (InstallAppsDesktop-Automatico0.config)
+#               - Fallback con mensaje de error claro si choco tampoco esta disponible
+#               - Refresca PATH post-instalacion para que nssm quede disponible
+#                 en la misma sesion sin necesidad de reiniciar
 #
 # CAMBIOS vs v2:
 #
@@ -831,6 +841,26 @@ try {
         if (-not (Test-Path $rutaScript)) {
             Write-Log "  [ERROR] No se encontro AutoRAM-Monitor.ps1 en $rutaScript" "ERROR" "Red"
             throw "AutoRAM-Monitor.ps1 no encontrado"
+        }
+
+        # --- Verificar disponibilidad de nssm (instalado en S1 via choco) ---
+        if (-not (Get-Command nssm -ErrorAction SilentlyContinue)) {
+            Write-Log "  [WARN] nssm no encontrado en PATH. Intentando instalar via Chocolatey..." "WARN" "Yellow"
+            if (Get-Command choco -ErrorAction SilentlyContinue) {
+                & choco install nssm -y --no-progress | Out-Null
+                # Refrescar PATH en la sesion actual sin reiniciar
+                $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" +
+                            [System.Environment]::GetEnvironmentVariable("PATH","User")
+                if (Get-Command nssm -ErrorAction SilentlyContinue) {
+                    Write-Log "  [OK] nssm instalado via Chocolatey y disponible." "INFO" "Green"
+                } else {
+                    throw "nssm no disponible tras instalacion con Chocolatey. Revisar choco."
+                }
+            } else {
+                throw "nssm no encontrado y Chocolatey tampoco esta disponible. Verificar Script 1."
+            }
+        } else {
+            Write-Log "  [OK] nssm disponible en PATH." "INFO" "Green"
         }
 
         # Instalar o reinstalar servicio NSSM
