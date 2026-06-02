@@ -4,6 +4,7 @@
 # Revisado y corregido por: Claude (Anthropic) - 2026-03-10
 # Actualizado por: Claude (Anthropic) - 2026-03-16
 # Actualizado por: Claude (Anthropic) - 2026-03-19
+# Actualizado por: Claude (Anthropic) - 2026-06-02
 # Requiere: PowerShell 7 | Administrador | Chocolatey instalado
 # Flujo: 1)Instalar -> 1.5)ConfigEverything -> 2)Verificar faltantes ->
 #        3)Limpiar sobrantes -> 3.5)Actualizar -> 4)Renombrar SSD -> llamar Script 5
@@ -40,6 +41,15 @@
 #             - Configura hide_empty_search_results=1 en Everything.ini
 #             - Clave confirmada en instalacion real (2026-03-16)
 #             - Pantalla en blanco al abrir Everything hasta que el usuario escriba
+#
+# CAMBIOS 2026-06-02 (manteniendo v3):
+#
+#  [PASO 4.5] EmptyStandbyList.exe agregado como nuevo paso entre PASO 4 y FIN:
+#             - Descarga RAMMap.zip desde Sysinternals si el exe no existe
+#             - Extrae solo EmptyStandbyList.exe a Tools\
+#             - Idempotente: si ya existe lo saltea sin tocar nada
+#             - Requerido por AutoRAM-Monitor.ps1 para liberar Standby List
+#               en equipos con poca RAM (3GB o menos)
 #
 # CAMBIOS 2026-03-19 (v3):
 #
@@ -523,6 +533,40 @@ try {
 }
 
 Write-Log "--- [PASO 4] Completado ---" "INFO" "Yellow"
+
+# ==============================================================================
+# PASO 4.5 - DESCARGAR EmptyStandbyList.exe (requerido por AutoRAM-Monitor)
+# ==============================================================================
+Write-Log "" "INFO" "White"
+Write-Log "--- PASO 4.5: EmptyStandbyList.exe para AutoRAM ---" "INFO" "Yellow"
+
+$rutaTools = Join-Path $automaticoPath "Tools"
+$destino   = Join-Path $rutaTools "EmptyStandbyList.exe"
+
+if (-not (Test-Path $destino)) {
+    try {
+        Write-Log "  Descargando EmptyStandbyList.exe desde Sysinternals..." "INFO" "Cyan"
+        New-Item -ItemType Directory -Path $rutaTools -Force | Out-Null
+        $zip    = Join-Path $env:TEMP "RAMMap.zip"
+        $tmpDir = Join-Path $env:TEMP "RAMMap-extract"
+        Invoke-WebRequest -Uri "https://download.sysinternals.com/files/RAMMap.zip" -OutFile $zip -UseBasicParsing
+        Expand-Archive -Path $zip -DestinationPath $tmpDir -Force
+        $exe = Get-ChildItem $tmpDir -Recurse -Filter "EmptyStandbyList.exe" | Select-Object -First 1
+        if ($exe) {
+            Copy-Item $exe.FullName -Destination $destino -Force
+            Write-Log "  [OK] EmptyStandbyList.exe disponible en Tools\" "INFO" "Green"
+        } else {
+            Write-Log "  [WARN] EmptyStandbyList.exe no encontrado dentro del ZIP." "WARN" "Yellow"
+        }
+        Remove-Item $zip, $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Log "  [ERROR] No se pudo descargar EmptyStandbyList.exe: $($_.Exception.Message)" "ERROR" "Red"
+    }
+} else {
+    Write-Log "  [i] EmptyStandbyList.exe ya presente en Tools\ - sin cambios." "INFO" "Gray"
+}
+
+Write-Log "--- [PASO 4.5] Completado ---" "INFO" "Yellow"
 
 # ==============================================================================
 # FIN DEL SCRIPT
