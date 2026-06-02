@@ -565,12 +565,18 @@ if (-not (Test-Path $destino)) {
     try {
         Write-Log "  Descargando EmptyStandbyList.exe desde Sysinternals..." "INFO" "Cyan"
         New-Item -ItemType Directory -Path $rutaTools -Force | Out-Null
-        Invoke-WebRequest -Uri "https://live.sysinternals.com/EmptyStandbyList.exe" -OutFile $destino -UseBasicParsing
-        if (Test-Path $destino) {
+        $zip    = Join-Path $env:TEMP "EmptyStandbyList.zip"
+        $tmpDir = Join-Path $env:TEMP "EmptyStandbyList-extract"
+        Invoke-WebRequest -Uri "https://download.sysinternals.com/files/EmptyStandbyList.zip" -OutFile $zip -UseBasicParsing
+        Expand-Archive -Path $zip -DestinationPath $tmpDir -Force
+        $exe = Get-ChildItem $tmpDir -Recurse -Filter "EmptyStandbyList.exe" | Select-Object -First 1
+        if ($exe) {
+            Copy-Item $exe.FullName -Destination $destino -Force
             Write-Log "  [OK] EmptyStandbyList.exe disponible en Tools\" "INFO" "Green"
         } else {
-            Write-Log "  [WARN] No se pudo descargar EmptyStandbyList.exe." "WARN" "Yellow"
+            Write-Log "  [WARN] EmptyStandbyList.exe no encontrado dentro del ZIP." "WARN" "Yellow"
         }
+        Remove-Item $zip, $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
     } catch {
         Write-Log "  [ERROR] No se pudo descargar EmptyStandbyList.exe: $($_.Exception.Message)" "ERROR" "Red"
     }
