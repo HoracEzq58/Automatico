@@ -44,12 +44,18 @@
 #
 # CAMBIOS 2026-06-02 (manteniendo v3):
 #
-#  [PASO 4.5] EmptyStandbyList.exe agregado como nuevo paso entre PASO 4 y FIN:
-#             - Descarga RAMMap.zip desde Sysinternals si el exe no existe
-#             - Extrae solo EmptyStandbyList.exe a Tools\
+#  [PASO 4.5] EmptyStandbyList.exe: corregida URL de descarga:
+#             - RAMMap.zip no contiene EmptyStandbyList.exe (error anterior)
+#             - Ahora se descarga directo desde live.sysinternals.com (sin ZIP)
 #             - Idempotente: si ya existe lo saltea sin tocar nada
 #             - Requerido por AutoRAM-Monitor.ps1 para liberar Standby List
 #               en equipos con poca RAM (3GB o menos)
+#
+#  [PASO 4]  Deteccion de tipo de disco (SSD/HDD/Unspecified):
+#             - Label ahora refleja tipo real: "SSD WD 240gb" o "HDD WD 160gb"
+#             - Para SSD: capacidad nominal estandar (comportamiento anterior)
+#             - Para HDD y Unspecified: capacidad real redondeada sin ajuste nominal
+#             - Cubre discos IDE/SATA viejos que reportan MediaType Unspecified
 #
 # CAMBIOS 2026-03-19 (v3):
 #
@@ -505,18 +511,30 @@ try {
             Write-Log "  Marca no mapeada, limpieza generica: '$rawBrand' -> '$brand'" "WARN" "Yellow"
         }
 
-        # Mapear capacidad real a nominal estandar
-        $rawGB      = $disk.Size / 1GB
-        $capacityGB = switch ($rawGB) {
-            { $_ -le 135  } { 128;  break }
-            { $_ -le 260  } { 240;  break }
-            { $_ -le 520  } { 500;  break }
-            { $_ -le 1050 } { 1000; break }
-            { $_ -le 2100 } { 2000; break }
-            default          { [math]::Round($_); break }
+        # Detectar tipo de disco
+        $mediaType = $disk.MediaType  # "SSD", "HDD", "Unspecified" o $null
+        $rawGB     = $disk.Size / 1GB
+
+        if ($mediaType -eq "SSD") {
+            # SSD: capacidad nominal estandar (comportamiento original)
+            $diskPrefix = "SSD"
+            $capacityGB = switch ($rawGB) {
+                { $_ -le 135  } { 128;  break }
+                { $_ -le 260  } { 240;  break }
+                { $_ -le 520  } { 500;  break }
+                { $_ -le 1050 } { 1000; break }
+                { $_ -le 2100 } { 2000; break }
+                default          { [math]::Round($_); break }
+            }
+            Write-Log "  Tipo detectado: SSD" "INFO" "Cyan"
+        } else {
+            # HDD o Unspecified (discos IDE/SATA viejos): capacidad real redondeada
+            $diskPrefix = "HDD"
+            $capacityGB = [math]::Round($rawGB)
+            Write-Log "  Tipo detectado: $($mediaType ? $mediaType : 'Unspecified') -> tratado como HDD" "WARN" "Yellow"
         }
 
-        $newLabel = "SSD $brand ${capacityGB}gb"
+        $newLabel = "$diskPrefix $brand ${capacityGB}gb"
 
         # NTFS admite hasta 32 chars en label
         if ($newLabel.Length -gt 32) {
@@ -547,18 +565,12 @@ if (-not (Test-Path $destino)) {
     try {
         Write-Log "  Descargando EmptyStandbyList.exe desde Sysinternals..." "INFO" "Cyan"
         New-Item -ItemType Directory -Path $rutaTools -Force | Out-Null
-        $zip    = Join-Path $env:TEMP "RAMMap.zip"
-        $tmpDir = Join-Path $env:TEMP "RAMMap-extract"
-        Invoke-WebRequest -Uri "https://download.sysinternals.com/files/RAMMap.zip" -OutFile $zip -UseBasicParsing
-        Expand-Archive -Path $zip -DestinationPath $tmpDir -Force
-        $exe = Get-ChildItem $tmpDir -Recurse -Filter "EmptyStandbyList.exe" | Select-Object -First 1
-        if ($exe) {
-            Copy-Item $exe.FullName -Destination $destino -Force
+        Invoke-WebRequest -Uri "https://live.sysinternals.com/EmptyStandbyList.exe" -OutFile $destino -UseBasicParsing
+        if (Test-Path $destino) {
             Write-Log "  [OK] EmptyStandbyList.exe disponible en Tools\" "INFO" "Green"
         } else {
-            Write-Log "  [WARN] EmptyStandbyList.exe no encontrado dentro del ZIP." "WARN" "Yellow"
+            Write-Log "  [WARN] No se pudo descargar EmptyStandbyList.exe." "WARN" "Yellow"
         }
-        Remove-Item $zip, $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
     } catch {
         Write-Log "  [ERROR] No se pudo descargar EmptyStandbyList.exe: $($_.Exception.Message)" "ERROR" "Red"
     }
