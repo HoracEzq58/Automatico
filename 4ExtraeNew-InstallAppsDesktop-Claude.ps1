@@ -46,7 +46,7 @@
 #
 #  [PASO 4.5] EmptyStandbyList.exe: corregida URL de descarga:
 #             - RAMMap.zip no contiene EmptyStandbyList.exe (error anterior)
-#             - Ahora se descarga directo desde live.sysinternals.com (sin ZIP)
+#             - Ahora se descarga directo desde GitHub (stefanpejcic/EmptyStandbyList)
 #             - Idempotente: si ya existe lo saltea sin tocar nada
 #             - Requerido por AutoRAM-Monitor.ps1 para liberar Standby List
 #               en equipos con poca RAM (3GB o menos)
@@ -563,20 +563,12 @@ $destino   = Join-Path $rutaTools "EmptyStandbyList.exe"
 
 if (-not (Test-Path $destino)) {
     try {
-        Write-Log "  Descargando EmptyStandbyList.exe desde Sysinternals..." "INFO" "Cyan"
-        New-Item -ItemType Directory -Path $rutaTools -Force | Out-Null
-        $zip    = Join-Path $env:TEMP "EmptyStandbyList.zip"
-        $tmpDir = Join-Path $env:TEMP "EmptyStandbyList-extract"
-        Invoke-WebRequest -Uri "https://download.sysinternals.com/files/EmptyStandbyList.zip" -OutFile $zip -UseBasicParsing
-        Expand-Archive -Path $zip -DestinationPath $tmpDir -Force
-        $exe = Get-ChildItem $tmpDir -Recurse -Filter "EmptyStandbyList.exe" | Select-Object -First 1
-        if ($exe) {
-            Copy-Item $exe.FullName -Destination $destino -Force
+        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/stefanpejcic/EmptyStandbyList/master/EmptyStandbyList.exe" -OutFile $destino -UseBasicParsing
+        if (Test-Path $destino) {
             Write-Log "  [OK] EmptyStandbyList.exe disponible en Tools\" "INFO" "Green"
         } else {
-            Write-Log "  [WARN] EmptyStandbyList.exe no encontrado dentro del ZIP." "WARN" "Yellow"
+            Write-Log "  [WARN] No se pudo descargar EmptyStandbyList.exe." "WARN" "Yellow"
         }
-        Remove-Item $zip, $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
     } catch {
         Write-Log "  [ERROR] No se pudo descargar EmptyStandbyList.exe: $($_.Exception.Message)" "ERROR" "Red"
     }
