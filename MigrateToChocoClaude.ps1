@@ -1,66 +1,82 @@
-# "MigratetoChocoClaude.ps1" v2 dejamos las versiones fuera del nombre porfa ! 
+# "MigrateToChocoClaude.ps1" nombre del archivo 
 # Migra aplicaciones instaladas a Chocolatey usando base de datos local JSON
 # v2   - Reemplaza API online por lookup local, matching regex, sin duplicados
 # v2.1 - Fix desinstalacion: parseo correcto de EXE y argumentos del UninstallString
-# v2.2 - Fix codigo 19 (MUST_REBOOT_TO_UNINSTALL) aceptado como exito; JSON: 7-Zip.*, Core Temp.*, LocalSend, PowerShell excluido
-# v2.3 - Fix codigo 1 (7-Zip uninstaller); PWSH7 tratamiento especial: Choco install + tarea programada para desinstalar MSI viejo al proximo login
+# v3   - Verificacion previa en Choco antes de desinstalar, DryRun, confirmacion,
+#        upgrade si ya esta en Choco, lista de sin-mapping al final
+# v3.1 - Navegadores al final de desinstalacion, Chrome el ultimo de todos
+# v3.2 - Chocolatey se instala PRIMERO antes de cualquier verificacion
+# v3.3 - ExcluirMigracion + MotivoExclusion en JSON: apps con plugins/librerias/config en AppData quedan intactas; PATH refresh antes de choco search; codigo 1 aceptado en 7-Zip
 #
 #Requires -Version 7.0
 #Requires -RunAsAdministrator
 
+param(
+    [switch]$DryRun  # Simula todo sin tocar nada. Uso: .\okMigratetoChoco.ps1 -DryRun
+)
+
 # ============================================================
 # CONFIGURACION
 # ============================================================
-
-# Ruta al JSON de mapping - debe estar en la misma carpeta que el script
 $script:JsonMappingPath = Join-Path $PSScriptRoot "okchoco_mapping_db.json"
 
-# Apps que nunca se tocan independientemente de lo que diga el JSON
 $script:ExcluirSiempre = @(
-    "whatsapp",           # paquete unlisted en Choco, no se actualiza bien
-    "rustdesk",           # nunca tocar en clientes remotos
-    "powershell-core"     # no tocar durante ejecucion
+    "whatsapp",
+    "rustdesk",
+    "powershell-core"
 )
 
-# Patrones regex que identifican PowerShell 7 instalado via MSI (no via Choco)
-# Se detecta separado para tratamiento especial: instala por Choco + tarea post-login desinstala el MSI
-$script:PwshMsiPatterns = @(
-    "^PowerShell 7.*$",
-    "^PowerShell-.*-win-x64$"
-)
+# Red de seguridad hardcoded: apps con plugins/librerias/config en AppData
+# Actua aunque el campo ExcluirMigracion no este en el JSON
+$script:ExcluirPorSeguridad = @{
+    "vscode"          = "Extensions y settings.json - el usuario las gestiona manualmente"
+    "vscode.install"  = "Extensions y settings.json - el usuario las gestiona manualmente"
+    "audacity"        = "Plugins Nyquist/LADSPA y macros - el usuario las gestiona manualmente"
+    "reaper"          = "Plugins VST y proyectos - el usuario los gestiona manualmente"
+    "obs-studio"      = "Escenas y plugins - el usuario los gestiona manualmente"
+    "gimp"            = "Scripts, brushes y plugins - el usuario los gestiona manualmente"
+    "inkscape"        = "Extensions y paletas custom - el usuario las gestiona manualmente"
+    "python"          = "Entornos virtuales y paquetes pip - el usuario los gestiona manualmente"
+    "nodejs"          = "Paquetes globales npm - el usuario los gestiona manualmente"
+    "nodejs.install"  = "Paquetes globales npm - el usuario los gestiona manualmente"
+    "virtualbox"      = "Config de red bridging - el usuario la gestiona manualmente"
+    "krita"           = "Brushes y recursos custom - el usuario los gestiona manualmente"
+    "blender"         = "Add-ons y configuracion - el usuario los gestiona manualmente"
+}
 
 # ============================================================
 # LOGGING
 # ============================================================
-
 function Write-Log {
-    param (
+    param(
         [string]$Message,
-        [ValidateSet("INFO", "WARNING", "ERROR")]
+        [ValidateSet("INFO","WARNING","ERROR")]
         [string]$Level = "INFO"
     )
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logMessage = "[$timestamp] [$Level] $Message"
-    Write-Host $logMessage
+    $prefix = if ($DryRun) { "[DRYRUN] " } else { "" }
+    $logMessage = "[$timestamp] [$Level] $prefix$Message"
+    $color = switch ($Level) {
+        "WARNING" { "Yellow" }
+        "ERROR"   { "Red" }
+        default   { "White" }
+    }
+    Write-Host $logMessage -ForegroundColor $color
     $logMessage | Out-File -FilePath "$PSScriptRoot\ChocolateyMigration.log" -Append -Encoding utf8
 }
 
 # ============================================================
-# CARGAR JSON DE MAPPING
+# CARGAR JSON
 # ============================================================
-
 function Get-MappingDB {
     if (-not (Test-Path $script:JsonMappingPath)) {
-        Write-Log "ERROR: No se encontro el archivo de mapping en: $script:JsonMappingPath" -Level "ERROR"
-        Write-Log "Coloca okchoco_mapping_db.json en la misma carpeta que el script." -Level "ERROR"
+        Write-Log "No se encontro: $script:JsonMappingPath" -Level "ERROR"
         return $null
     }
-
     try {
         $db = Get-Content -Path $script:JsonMappingPath -Raw -Encoding UTF8 | ConvertFrom-Json
         Write-Log "Base de datos cargada: $($db.Count) entradas"
 
-        # Eliminar duplicados: quedarse con la primera entrada por NombreOriginal
         $seen = @{}
         $dbLimpia = @()
         foreach ($entry in $db) {
@@ -68,63 +84,82 @@ function Get-MappingDB {
             if (-not $seen.ContainsKey($key)) {
                 $seen[$key] = $true
                 $dbLimpia += $entry
-            }
-            else {
-                Write-Log "Duplicado ignorado en JSON: '$($entry.NombreOriginal)' -> '$($entry.NombreChoco)'" -Level "WARNING"
+            } else {
+                Write-Log "Duplicado ignorado: '$($entry.NombreOriginal)' -> '$($entry.NombreChoco)'" -Level "WARNING"
             }
         }
-
-        Write-Log "Entradas unicas en DB: $($dbLimpia.Count)"
+        Write-Log "Entradas unicas: $($dbLimpia.Count)"
         return $dbLimpia
-    }
-    catch {
-        Write-Log "Error leyendo el JSON de mapping: $_" -Level "ERROR"
+    } catch {
+        Write-Log "Error leyendo JSON: $_" -Level "ERROR"
         return $null
     }
 }
 
 # ============================================================
-# BUSCAR APP EN EL JSON
-# Devuelve el objeto de mapping o $null si no se encuentra o esta excluida
+# BUSCAR EN JSON
 # ============================================================
-
 function Find-InMappingDB {
-    param (
-        [string]$DisplayName,
-        [array]$MappingDB
-    )
+    param([string]$DisplayName, [array]$MappingDB)
 
     foreach ($entry in $MappingDB) {
-        # Saltar entradas excluidas en el JSON
         if ($entry.Excluir -eq $true) { continue }
-
-        # Saltar si NombreChoco esta vacio
         if ([string]::IsNullOrWhiteSpace($entry.NombreChoco)) { continue }
-
-        # Saltar si el ID de choco esta en la lista de exclusion permanente
         if ($script:ExcluirSiempre -contains $entry.NombreChoco.ToLower()) { continue }
-
-        # Matching: usar -match (regex) para aprovechar patrones como "Mozilla Firefox.*"
+        # Excluir apps con plugins/librerias/config en AppData (campo JSON v3.3)
+        if ($entry.PSObject.Properties["ExcluirMigracion"] -and $entry.ExcluirMigracion -eq $true) { continue }
+        # Red de seguridad hardcoded por si falta el campo en el JSON
+        if ($script:ExcluirPorSeguridad.ContainsKey($entry.NombreChoco.ToLower())) { continue }
         try {
-            if ($DisplayName -match "(?i)^$($entry.NombreOriginal)$") {
-                return $entry
-            }
-        }
-        catch {
-            # Si el patron regex es invalido, caer a comparacion exacta
-            if ($DisplayName -ieq $entry.NombreOriginal) {
-                return $entry
-            }
+            if ($DisplayName -match "(?i)^$($entry.NombreOriginal)$") { return $entry }
+        } catch {
+            if ($DisplayName -ieq $entry.NombreOriginal) { return $entry }
         }
     }
-
     return $null
 }
 
 # ============================================================
-# OBTENER APPS INSTALADAS DESDE EL REGISTRO
+# VERIFICAR QUE EL PAQUETE EXISTE EN CHOCO (ONLINE)
 # ============================================================
+function Test-ChocoPackageExists {
+    param([string]$PackageId)
 
+    try {
+        # Asegurar que choco este en el PATH de esta sesion PS7
+        $chocoExe = "$env:ProgramData\chocolatey\bin\choco.exe"
+        if (-not (Get-Command choco -ErrorAction SilentlyContinue) -and (Test-Path $chocoExe)) {
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
+                        [System.Environment]::GetEnvironmentVariable("Path","User")
+        }
+        $resultado = & choco search $PackageId --exact --limit-output 2>&1
+        if ($LASTEXITCODE -eq 0 -and $resultado -match "^$PackageId\|") {
+            return $true
+        }
+        return $false
+    } catch {
+        Write-Log "Error verificando '$PackageId' en Choco: $_" -Level "WARNING"
+        return $false
+    }
+}
+
+# ============================================================
+# VERIFICAR SI YA ESTA INSTALADO POR CHOCO
+# ============================================================
+function Test-ChocoAlreadyInstalled {
+    param([string]$PackageId)
+
+    try {
+        $resultado = & choco list $PackageId --exact --limit-output 2>&1
+        return ($LASTEXITCODE -eq 0 -and $resultado -match "^$PackageId\|")
+    } catch {
+        return $false
+    }
+}
+
+# ============================================================
+# APPS INSTALADAS DEL REGISTRO
+# ============================================================
 function Get-InstalledApps {
     Write-Log "Relevando aplicaciones instaladas en el registro..."
 
@@ -134,17 +169,9 @@ function Get-InstalledApps {
         "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
     )
 
-    # Filtros de sistema - no tocar estas
     $filtrosSistema = @(
-        "*Microsoft Visual C++*",
-        "*Windows *",
-        "*Update for*",
-        "*.NET*",
-        "*Driver*",
-        "*Redistributable*",
-        "*Runtime*",
-        "*Security Update*",
-        "*Hotfix*"
+        "*Microsoft Visual C++*","*Windows *","*Update for*","*.NET*",
+        "*Driver*","*Redistributable*","*Runtime*","*Security Update*","*Hotfix*"
     )
 
     $installedApps = @()
@@ -153,33 +180,21 @@ function Get-InstalledApps {
     foreach ($path in $regPaths) {
         try {
             $apps = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue |
-                Where-Object {
-                    $_.DisplayName -and
-                    $_.UninstallString -and
-                    -not [string]::IsNullOrWhiteSpace($_.DisplayName)
-                } |
-                Select-Object DisplayName, DisplayVersion, Publisher, UninstallString
+                Where-Object { $_.DisplayName -and $_.UninstallString -and -not [string]::IsNullOrWhiteSpace($_.DisplayName) } |
+                Select-Object DisplayName, DisplayVersion, UninstallString
 
             foreach ($app in $apps) {
-                # Saltar duplicados por nombre (pueden aparecer en varios paths del registro)
                 $key = $app.DisplayName.ToLower()
                 if ($nombresVistos.ContainsKey($key)) { continue }
-
-                # Saltar apps de sistema
                 $esSistema = $false
                 foreach ($filtro in $filtrosSistema) {
-                    if ($app.DisplayName -like $filtro) {
-                        $esSistema = $true
-                        break
-                    }
+                    if ($app.DisplayName -like $filtro) { $esSistema = $true; break }
                 }
                 if ($esSistema) { continue }
-
                 $nombresVistos[$key] = $true
                 $installedApps += $app
             }
-        }
-        catch {
+        } catch {
             Write-Log "Error accediendo a: $path - $_" -Level "ERROR"
         }
     }
@@ -191,81 +206,63 @@ function Get-InstalledApps {
 # ============================================================
 # INSTALAR CHOCOLATEY
 # ============================================================
-
 function Install-Chocolatey {
     $chocoExe = "$env:ProgramData\chocolatey\bin\choco.exe"
-
     if (Test-Path $chocoExe) {
         Write-Log "Chocolatey ya esta instalado"
-        # Refrescar PATH por si acaso
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
                     [System.Environment]::GetEnvironmentVariable("Path","User")
         return $true
     }
-
-    Write-Log "Instalando Chocolatey..."
+    if ($DryRun) { Write-Log "[DRYRUN] Se instalaria Chocolatey aqui"; return $true }
     try {
+        Write-Log "Instalando Chocolatey..."
         Set-ExecutionPolicy Bypass -Scope Process -Force
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
         Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-
         if (Test-Path $chocoExe) {
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
                         [System.Environment]::GetEnvironmentVariable("Path","User")
             Write-Log "Chocolatey instalado correctamente"
             return $true
         }
-        else {
-            Write-Log "Chocolatey no se pudo instalar" -Level "ERROR"
-            return $false
-        }
-    }
-    catch {
+        Write-Log "No se pudo instalar Chocolatey" -Level "ERROR"
+        return $false
+    } catch {
         Write-Log "Excepcion instalando Chocolatey: $_" -Level "ERROR"
         return $false
     }
 }
 
 # ============================================================
-# DESINSTALAR UNA APP
+# DESINSTALAR APP
 # ============================================================
-
 function Uninstall-Application {
-    param (
-        [string]$DisplayName,
-        [string]$UninstallString
-    )
+    param([string]$DisplayName, [string]$UninstallString)
 
     Write-Log "Desinstalando: $DisplayName"
     Write-Log "UninstallString: $UninstallString"
 
+    if ($DryRun) { Write-Log "[DRYRUN] Se desinstalaria: $DisplayName"; return $true }
+
     try {
         if ($UninstallString -imatch "msiexec") {
-            # --- CASO MSI ---
             $guid = [regex]::Match($UninstallString, '\{[A-F0-9\-]+\}', 'IgnoreCase').Value
             if ($guid) {
-                Write-Log "MSI detectado, GUID: $guid"
+                Write-Log "MSI GUID: $guid"
                 $exitCode = (Start-Process "msiexec.exe" -ArgumentList "/x $guid /qn /norestart" -Wait -PassThru -NoNewWindow).ExitCode
-            }
-            else {
+            } else {
                 Write-Log "No se pudo extraer GUID de: $UninstallString" -Level "WARNING"
                 return $false
             }
-        }
-        else {
-            # --- CASO EXE ---
-            # Parsear correctamente: separar EXE entre comillas de los argumentos que siguen
+        } else {
             if ($UninstallString -match '^"([^"]+)"\s*(.*)$') {
-                # Formato: "C:\ruta\setup.exe" --flag1 --flag2
                 $exe  = $matches[1]
                 $args = $matches[2].Trim()
-            }
-            elseif ($UninstallString -match '^(\S+)\s*(.*)$') {
-                # Formato sin comillas: C:\ruta\setup.exe --flag1
+            } elseif ($UninstallString -match '^(\S+)\s*(.*)$') {
                 $exe  = $matches[1]
                 $args = $matches[2].Trim()
-            }
-            else {
+            } else {
                 $exe  = $UninstallString
                 $args = ""
             }
@@ -273,310 +270,316 @@ function Uninstall-Application {
             Write-Log "EXE: $exe"
             Write-Log "Args: $args"
 
-            # Si el UninstallString ya trae sus propios argumentos los usamos tal cual
-            # Si no trae ninguno, agregamos los silenciosos genéricos
-            if ([string]::IsNullOrWhiteSpace($args)) {
-                $args = "/S /silent /quiet /uninstall"
-                Write-Log "Sin argumentos propios, usando silenciosos genericos"
+            if (-not (Test-Path $exe)) {
+                Write-Log "EXE no encontrado: $exe" -Level "ERROR"
+                return $false
             }
 
-            if (-not (Test-Path $exe)) {
-                Write-Log "EXE no encontrado en disco: $exe" -Level "ERROR"
-                return $false
+            if ([string]::IsNullOrWhiteSpace($args)) {
+                $args = "/S"
+                Write-Log "Sin argumentos propios, usando /S"
             }
 
             $exitCode = (Start-Process $exe -ArgumentList $args -Wait -PassThru -NoNewWindow).ExitCode
         }
 
-        # Codigos de exito: 0=OK, 1=OK (7-Zip/InnoSetup), 3010=OK con reinicio pendiente, 1605=ya no estaba instalado, 19=requiere reinicio para completar desinstalacion
-        if ($exitCode -in @(0, 1, 3010, 1605, 19)) {
+        # 0=OK, 3010=OK reinicio pendiente, 1605=ya no estaba, 19=Chrome/Edge reboot
+        if ($exitCode -in @(0, 1, 3010, 1605, 19)) {  # 1=7-Zip exito, 19=Chrome/Edge reboot
             Write-Log "Desinstalacion exitosa: $DisplayName (codigo: $exitCode)"
             return $true
-        }
-        else {
-            Write-Log "Desinstalacion con codigo inesperado: $DisplayName (codigo: $exitCode)" -Level "WARNING"
+        } else {
+            Write-Log "Codigo inesperado: $DisplayName (codigo: $exitCode)" -Level "WARNING"
             return $false
         }
-    }
-    catch {
+    } catch {
         Write-Log "Excepcion desinstalando '$DisplayName': $_" -Level "ERROR"
         return $false
     }
 }
 
 # ============================================================
-# INSTALAR PAQUETE DESDE CHOCOLATEY
+# INSTALAR O ACTUALIZAR DESDE CHOCO
 # ============================================================
-
 function Install-ChocoPackage {
-    param (
-        [string]$PackageId,
-        [int]$MaxRetries = 3
-    )
+    param([string]$PackageId, [bool]$YaInstalado = $false, [int]$MaxRetries = 3)
 
-    Write-Log "Instalando desde Choco: $PackageId"
+    $accion = if ($YaInstalado) { "upgrade" } else { "install" }
+    Write-Log "Choco $accion`: $PackageId"
+
+    if ($DryRun) { Write-Log "[DRYRUN] Se ejecutaria: choco $accion $PackageId -y"; return $true }
 
     for ($intento = 1; $intento -le $MaxRetries; $intento++) {
         try {
             switch ($intento) {
-                1 { & choco install $PackageId -y --no-progress 2>&1 | Out-Null }
-                2 { & choco install $PackageId -y --no-progress --ignore-checksums 2>&1 | Out-Null }
-                3 { & choco install $PackageId -y --no-progress --force 2>&1 | Out-Null }
+                1 { & choco $accion $PackageId -y --no-progress 2>&1 | Out-Null }
+                2 { & choco $accion $PackageId -y --no-progress --ignore-checksums 2>&1 | Out-Null }
+                3 { & choco $accion $PackageId -y --no-progress --force 2>&1 | Out-Null }
             }
-
             if ($LASTEXITCODE -eq 0) {
-                Write-Log "Instalado OK: $PackageId"
+                Write-Log "OK: $PackageId"
                 return $true
-            }
-            else {
+            } else {
                 Write-Log "Intento $intento fallido para '$PackageId' (exit: $LASTEXITCODE)" -Level "WARNING"
                 if ($intento -lt $MaxRetries) { Start-Sleep -Seconds 3 }
             }
-        }
-        catch {
-            Write-Log "Excepcion intento $intento para '$PackageId': $_" -Level "ERROR"
+        } catch {
+            Write-Log "Excepcion intento $intento '$PackageId': $_" -Level "ERROR"
             if ($intento -lt $MaxRetries) { Start-Sleep -Seconds 3 }
         }
     }
-
     Write-Log "FALLO tras $MaxRetries intentos: $PackageId" -Level "ERROR"
     return $false
 }
 
 # ============================================================
-# MIGRACION ESPECIAL POWERSHELL 7 MSI -> CHOCOLATEY
-# Instala powershell-core via Choco y registra tarea programada
-# para que al proximo login se desinstale el MSI viejo y la tarea se autoelimine
-# ============================================================
-
-function Register-DesinstalarPwshMsi {
-    $nombreTarea = "TuPcVeloz-DesinstalarPwshMsi"
-
-    $scriptBloque = @'
-$rutas = @(
-    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
-    "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
-)
-foreach ($ruta in $rutas) {
-    Get-ItemProperty $ruta -ErrorAction SilentlyContinue |
-    Where-Object { $_.DisplayName -match "^PowerShell 7" } |
-    ForEach-Object {
-        $us = if ($_.QuietUninstallString) { $_.QuietUninstallString } else { $_.UninstallString }
-        if ($us) {
-            if ($us -match '^"([^"]+)"(.*)$') { $exe = $Matches[1]; $arg = $Matches[2].Trim() }
-            else { $exe = $us; $arg = "" }
-            Start-Process -FilePath $exe -ArgumentList "$arg /quiet /norestart" -Wait -ErrorAction SilentlyContinue
-        }
-    }
-}
-Unregister-ScheduledTask -TaskName "TuPcVeloz-DesinstalarPwshMsi" -Confirm:$false -ErrorAction SilentlyContinue
-'@
-
-    $encoded  = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($scriptBloque))
-    $accion   = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-NonInteractive -EncodedCommand $encoded"
-    $trigger  = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
-    $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -DeleteExpiredTaskAfter (New-TimeSpan -Seconds 1)
-
-    try {
-        Register-ScheduledTask -TaskName $nombreTarea -Action $accion -Trigger $trigger -Settings $settings -RunLevel Highest -Force | Out-Null
-        Write-Log "Tarea programada '$nombreTarea' registrada: desinstalara MSI de PWSH7 al proximo login"
-        return $true
-    }
-    catch {
-        Write-Log "No se pudo registrar tarea para desinstalar MSI de PWSH7: $_" -Level "WARNING"
-        return $false
-    }
-}
-
-# ============================================================
 # FUNCION PRINCIPAL
 # ============================================================
-
 function Start-ChocolateyMigration {
     $startTime = Get-Date
+
+    if ($DryRun) {
+        Write-Log "========================================================"
+        Write-Log "=== MODO SIMULACION (DryRun) - NO SE TOCA NADA ==="
+        Write-Log "========================================================"
+    }
+
     Write-Log "========================================================"
-    Write-Log "=== MIGRACION A CHOCOLATEY v2 - $(Get-Date -Format 'dd/MM/yyyy HH:mm') ==="
+    Write-Log "=== MIGRACION A CHOCOLATEY v3 - $(Get-Date -Format 'dd/MM/yyyy HH:mm') ==="
     Write-Log "========================================================"
 
-    # 1. Cargar base de datos JSON
-    $mappingDB = Get-MappingDB
-    if ($null -eq $mappingDB) {
-        Write-Log "No se puede continuar sin la base de datos de mapping." -Level "ERROR"
+    # 1. INSTALAR CHOCOLATEY PRIMERO - siempre, el cliente casi nunca lo tiene
+    Write-Log "========================================================"
+    Write-Log "=== PASO PREVIO: INSTALANDO/VERIFICANDO CHOCOLATEY ==="
+    Write-Log "========================================================"
+    if (-not (Install-Chocolatey)) {
+        Write-Log "CRITICO: No se pudo instalar Chocolatey. Abortando." -Level "ERROR"
         return
     }
 
-    # 2. Obtener apps instaladas
+    # 2. Cargar JSON
+    $mappingDB = Get-MappingDB
+    if ($null -eq $mappingDB) { return }
+
+    # 3. Obtener apps instaladas
     $installedApps = Get-InstalledApps
     if ($installedApps.Count -eq 0) {
-        Write-Log "No se encontraron aplicaciones instaladas. Abortando." -Level "WARNING"
+        Write-Log "No se encontraron apps instaladas." -Level "WARNING"
         return
     }
 
-    # 3. Cruzar apps instaladas contra el JSON
+    # 4. Cruzar con JSON
     Write-Log "--- Analizando apps contra base de datos ---"
-    $candidatos    = @()
-    $noEncontradas = @()
-    $pwshMsiInfo   = $null   # PWSH7 MSI detectado para tratamiento especial
+    $candidatos         = @()
+    $noEncontradas      = @()
+    $excluidasRiesgo    = @()  # Apps con ExcluirMigracion=true o en lista hardcoded
 
     foreach ($app in $installedApps) {
+        # Chequear exclusion por seguridad ANTES del match
+        $entradaDB = $mappingDB | Where-Object {
+            try { $app.DisplayName -match "(?i)^$($_.NombreOriginal)$" } catch { $false }
+        } | Select-Object -First 1
 
-        # Detectar PWSH7 instalado via MSI antes del lookup normal
-        $esPwshMsi = $false
-        foreach ($patron in $script:PwshMsiPatterns) {
-            if ($app.DisplayName -match $patron) { $esPwshMsi = $true; break }
-        }
-        if ($esPwshMsi) {
-            Write-Log "PWSH7-MSI detectado: '$($app.DisplayName)' -> tratamiento especial (instala Choco + tarea post-login)"
-            $pwshMsiInfo = $app
-            continue
+        if ($entradaDB) {
+            $chocoIdCheck = ($entradaDB.NombreChoco ?? "").ToLower()
+            $motivoJSON   = if ($entradaDB.PSObject.Properties["ExcluirMigracion"] -and $entradaDB.ExcluirMigracion) { $entradaDB.MotivoExclusion } else { $null }
+            $motivoLista  = if ($script:ExcluirPorSeguridad.ContainsKey($chocoIdCheck)) { $script:ExcluirPorSeguridad[$chocoIdCheck] } else { $null }
+            $motivo       = $motivoJSON ?? $motivoLista
+            if ($motivo) {
+                Write-Log "EXCLUIDA (riesgo): '$($app.DisplayName)' - $motivo" -Level "WARNING"
+                $excluidasRiesgo += "$($app.DisplayName): $motivo"
+                continue
+            }
         }
 
         $match = Find-InMappingDB -DisplayName $app.DisplayName -MappingDB $mappingDB
-
         if ($match) {
             Write-Log "CANDIDATO: '$($app.DisplayName)' -> choco: '$($match.NombreChoco)'"
             $candidatos += [PSCustomObject]@{
-                DisplayName    = $app.DisplayName
-                Version        = $app.DisplayVersion
-                ChocolateyId   = $match.NombreChoco
+                DisplayName     = $app.DisplayName
+                Version         = $app.DisplayVersion
+                ChocolateyId    = $match.NombreChoco
                 UninstallString = $app.UninstallString
-                EsBloatware    = $match.EsBloatware
+                EsBloatware     = $match.EsBloatware
+                Categoria       = $match.Categoria
             }
-        }
-        else {
+        } else {
             $noEncontradas += $app.DisplayName
         }
     }
 
-    Write-Log "Apps para migrar: $($candidatos.Count)"
-    Write-Log "Apps sin mapping (se dejan como estan): $($noEncontradas.Count)"
-    if ($pwshMsiInfo) {
-        Write-Log "PowerShell 7 MSI: detectado, se migrara al final via Choco + tarea post-login"
-    }
+    Write-Log "Candidatos con mapping: $($candidatos.Count)"
+    Write-Log "Sin mapping: $($noEncontradas.Count)"
 
     if ($candidatos.Count -eq 0) {
-        Write-Log "Ninguna app instalada tiene mapping en la DB. Nada que migrar." -Level "WARNING"
+        Write-Log "Ninguna app tiene mapping. Nada que migrar." -Level "WARNING"
         return
     }
 
-    # Mostrar resumen antes de proceder
-    Write-Log "--- Apps que seran migradas ---"
+    # 5. VERIFICAR QUE EXISTEN EN CHOCO ANTES DE DESINSTALAR
+    Write-Log "========================================================"
+    Write-Log "=== PASO 0: VERIFICANDO PAQUETES EN CHOCO (ONLINE) ==="
+    Write-Log "========================================================"
+
+    $verificados  = @()
+    $noEnChoco    = @()
+
     foreach ($c in $candidatos) {
-        $bloat = if ($c.EsBloatware) { " [BLOATWARE]" } else { "" }
-        Write-Log "  $($c.DisplayName) -> $($c.ChocolateyId)$bloat"
+        Write-Log "Verificando en Choco: $($c.ChocolateyId) ..."
+        if ($DryRun) {
+            Write-Log "[DRYRUN] Se verificaria: $($c.ChocolateyId)"
+            $verificados += $c
+            continue
+        }
+
+        $existeEnChoco   = Test-ChocoPackageExists  -PackageId $c.ChocolateyId
+        $yaEnChoco       = Test-ChocoAlreadyInstalled -PackageId $c.ChocolateyId
+
+        if ($existeEnChoco) {
+            $c | Add-Member -NotePropertyName "YaEnChoco" -NotePropertyValue $yaEnChoco -Force
+            $verificados += $c
+            $estado = if ($yaEnChoco) { "ya instalado por Choco -> se hara upgrade" } else { "OK en repo" }
+            Write-Log "  VERIFICADO: $($c.ChocolateyId) ($estado)"
+        } else {
+            $noEnChoco += $c.DisplayName
+            Write-Log "  NO ENCONTRADO EN CHOCO: $($c.ChocolateyId) -> '$($c.DisplayName)' se omite" -Level "WARNING"
+        }
     }
 
-    # 4. Desinstalar apps originales
+    Write-Log "Verificados OK: $($verificados.Count) / $($candidatos.Count)"
+    if ($noEnChoco.Count -gt 0) {
+        Write-Log "Omitidos (no estan en Choco, no se tocan):" -Level "WARNING"
+        foreach ($n in $noEnChoco) { Write-Log "  - $n" -Level "WARNING" }
+    }
+
+    if ($verificados.Count -eq 0) {
+        Write-Log "Ninguna app verificada en Choco. Abortando." -Level "WARNING"
+        return
+    }
+
+    # 6. CONFIRMACION ANTES DE PROCEDER
+    Write-Log "========================================================"
+    Write-Log "=== Apps que seran migradas (verificadas en Choco) ==="
+    Write-Log "========================================================"
+    foreach ($c in $verificados) {
+        $extra = @()
+        if ($c.EsBloatware) { $extra += "BLOATWARE" }
+        if ($c.YaEnChoco)   { $extra += "upgrade" } else { $extra += "install" }
+        $tag = if ($extra) { " [" + ($extra -join ", ") + "]" } else { "" }
+        Write-Log "  $($c.DisplayName) -> $($c.ChocolateyId)$tag"
+    }
+
+    if (-not $DryRun) {
+        Write-Host ""
+        Write-Host "==> Continuar con la migracion de $($verificados.Count) apps? (S/N): " -ForegroundColor Cyan -NoNewline
+        $confirmacion = Read-Host
+        if ($confirmacion -notmatch "^[Ss]$") {
+            Write-Log "Operacion cancelada por el usuario."
+            return
+        }
+    }
+
+    # 7. DESINSTALAR (solo las que NO estan ya en Choco)
+    # ORDEN: primero todo, luego navegadores secundarios, Chrome al ultimo
+    # Asi la PC nunca queda sin browser durante el proceso
     Write-Log "========================================================"
     Write-Log "=== PASO 1: DESINSTALANDO APPS ORIGINALES ==="
     Write-Log "========================================================"
     $desinstalacionesOK = 0
+    $paraReinstalar     = @()
 
-    foreach ($c in $candidatos) {
+    $noNavegadores = $verificados | Where-Object {
+        $_.ChocolateyId -notmatch 'googlechrome|firefox|microsoft-edge|opera|brave|tor-browser'
+    }
+    $navegadores = $verificados | Where-Object {
+        $_.ChocolateyId -match 'firefox|microsoft-edge|opera|brave|tor-browser'
+    }
+    $chrome = $verificados | Where-Object { $_.ChocolateyId -eq 'googlechrome' }
+
+    Write-Log "Orden de desinstalacion: apps normales -> navegadores secundarios -> Chrome al ultimo"
+    $ordenDesinstalacion = @() + $noNavegadores + $navegadores + $chrome
+
+    foreach ($c in $ordenDesinstalacion) {
+        if ($c.YaEnChoco) {
+            Write-Log "Saltando desinstalacion de '$($c.DisplayName)' - ya esta en Choco, se hara upgrade"
+            $paraReinstalar += $c
+            continue
+        }
         if (Uninstall-Application -DisplayName $c.DisplayName -UninstallString $c.UninstallString) {
             $desinstalacionesOK++
+            $paraReinstalar += $c
+        } else {
+            Write-Log "Se omite reinstalacion de '$($c.DisplayName)' por fallo en desinstalacion" -Level "WARNING"
         }
     }
 
-    Write-Log "Desinstaladas: $desinstalacionesOK / $($candidatos.Count)"
+    Write-Log "Desinstaladas: $desinstalacionesOK / $($verificados.Where({-not $_.YaEnChoco}).Count)"
 
-    # 5. Instalar Chocolatey
-    Write-Log "========================================================"
-    Write-Log "=== PASO 2: INSTALANDO CHOCOLATEY ==="
-    Write-Log "========================================================"
-    if (-not (Install-Chocolatey)) {
-        Write-Log "CRITICO: No se pudo instalar Chocolatey. Las apps fueron desinstaladas pero no se reinstalaran." -Level "ERROR"
-        Write-Log "Instala Chocolatey manualmente y ejecuta el paso 3 por separado." -Level "ERROR"
-        return
-    }
+    # 8. Chocolatey ya instalado al principio, nada que hacer aqui
 
-    # 6. Reinstalar todo desde Chocolatey
+    # 9. INSTALAR / UPGRADE DESDE CHOCO
     Write-Log "========================================================"
-    Write-Log "=== PASO 3: REINSTALANDO DESDE CHOCOLATEY ==="
+    Write-Log "=== PASO 3: INSTALANDO/ACTUALIZANDO DESDE CHOCOLATEY ==="
     Write-Log "========================================================"
     $instalacionesOK = 0
     $fallos = @()
 
-    foreach ($c in $candidatos) {
-        if (Install-ChocoPackage -PackageId $c.ChocolateyId) {
+    foreach ($c in $paraReinstalar) {
+        $yaEnChoco = if ($null -ne $c.YaEnChoco) { $c.YaEnChoco } else { $false }
+        if (Install-ChocoPackage -PackageId $c.ChocolateyId -YaInstalado $yaEnChoco) {
             $instalacionesOK++
-        }
-        else {
+        } else {
             $fallos += "$($c.DisplayName) -> $($c.ChocolateyId)"
         }
     }
 
-    # 6b. PWSH7 tratamiento especial: instalar via Choco, desinstalar MSI viejo al proximo login
-    $pwshChocoOK = $false
-    if ($pwshMsiInfo) {
-        Write-Log "========================================================"
-        Write-Log "=== PASO 3b: MIGRANDO POWERSHELL 7 (tratamiento especial) ==="
-        Write-Log "========================================================"
-        Write-Log "Instalando powershell-core via Choco (MSI viejo sigue activo hasta el proximo login)..."
-        $pwshChocoOK = Install-ChocoPackage -PackageId "powershell-core"
-        if ($pwshChocoOK) {
-            $instalacionesOK++
-            Register-DesinstalarPwshMsi | Out-Null
-        }
-        else {
-            $fallos += "$($pwshMsiInfo.DisplayName) -> powershell-core"
-            Write-Log "No se pudo instalar powershell-core via Choco. MSI original sin cambios." -Level "WARNING"
-        }
-    }
-
-    # 7. Generar XML para referencia futura
+    # 10. GENERAR XML DE REFERENCIA
     $configDir = Join-Path $PSScriptRoot "Config"
     New-Item -Path $configDir -ItemType Directory -Force | Out-Null
     $xmlPath = Join-Path $configDir "AppsInstaladas-Choco.config"
-
-    # Armar lista de paquetes exitosos (candidatos normales + pwsh-core si OK)
-    $exitosos = $candidatos | Where-Object { $fallos -notcontains "$($_.DisplayName) -> $($_.ChocolateyId)" }
     $xmlContent = "<?xml version=`"1.0`" encoding=`"utf-8`"?>`r`n<packages>`r`n"
-    foreach ($c in $exitosos) {
+    foreach ($c in ($paraReinstalar | Where-Object { $fallos -notcontains "$($_.DisplayName) -> $($_.ChocolateyId)" })) {
         $xmlContent += "  <package id=`"$($c.ChocolateyId)`" />`r`n"
-    }
-    if ($pwshChocoOK) {
-        $xmlContent += "  <package id=`"powershell-core`" />`r`n"
     }
     $xmlContent += "</packages>"
     $xmlContent | Out-File -FilePath $xmlPath -Encoding utf8
-    Write-Log "XML de referencia guardado en: $xmlPath"
+    Write-Log "XML guardado en: $xmlPath"
 
-    # 8. Resumen final
-    $totalEsperado = $candidatos.Count + $(if ($pwshMsiInfo) { 1 } else { 0 })
+    # 11. RESUMEN FINAL
     $duracion = (Get-Date) - $startTime
     Write-Log "========================================================"
     Write-Log "=== RESUMEN FINAL ==="
     Write-Log "========================================================"
-    Write-Log "Apps analizadas del registro:      $($installedApps.Count)"
-    Write-Log "Apps con mapping en DB:            $($candidatos.Count)"
-    Write-Log "Apps sin mapping (sin cambios):    $($noEncontradas.Count)"
-    Write-Log "Desinstalaciones exitosas:         $desinstalacionesOK / $($candidatos.Count)"
-    Write-Log "Instalaciones Choco exitosas:      $instalacionesOK / $totalEsperado"
-    if ($pwshMsiInfo) {
-        if ($pwshChocoOK) {
-            Write-Log "PowerShell 7:                      OK - Choco instalado, MSI viejo se limpia al proximo login"
-        }
-        else {
-            Write-Log "PowerShell 7:                      FALLO migracion a Choco - MSI original sin cambios" -Level "WARNING"
-        }
-    }
+    Write-Log "Apps analizadas:                   $($installedApps.Count)"
+    Write-Log "Con mapping en DB:                 $($candidatos.Count)"
+    Write-Log "Verificadas OK en Choco:           $($verificados.Count)"
+    Write-Log "Omitidas (no estan en Choco):      $($noEnChoco.Count)"
+    Write-Log "Excluidas por seguridad:           $($excluidasRiesgo.Count)"
+    Write-Log "Desinstalaciones exitosas:         $desinstalacionesOK"
+    Write-Log "Instalaciones/upgrades exitosos:   $instalacionesOK / $($paraReinstalar.Count)"
     Write-Log "Tiempo total:                      $($duracion.ToString('hh\:mm\:ss'))"
 
     if ($fallos.Count -gt 0) {
-        Write-Log "--- Apps que FALLARON la instalacion ---" -Level "WARNING"
-        foreach ($f in $fallos) {
-            Write-Log "  FALLO: $f" -Level "WARNING"
-        }
-        Write-Log "Estas apps deben instalarse manualmente." -Level "WARNING"
+        Write-Log "--- FALLOS en instalacion ---" -Level "WARNING"
+        foreach ($f in $fallos) { Write-Log "  FALLO: $f" -Level "WARNING" }
     }
-    else {
-        Write-Log "EXITO TOTAL: Todas las apps migradas correctamente a Chocolatey."
+
+    if ($excluidasRiesgo.Count -gt 0) {
+        Write-Log "--- Apps EXCLUIDAS (plugins/librerias/config - actualizar manualmente) ---" -Level "WARNING"
+        foreach ($e in $excluidasRiesgo) { Write-Log "  EXCLUIDA: $e" -Level "WARNING" }
+        Write-Log "Estas apps NO fueron tocadas. El usuario las actualiza manualmente." -Level "WARNING"
+    }
+
+    if ($noEncontradas.Count -gt 0) {
+        Write-Log "--- Apps SIN MAPPING (agregar al JSON si tienen paquete en Choco) ---" -Level "WARNING"
+        foreach ($n in ($noEncontradas | Sort-Object)) {
+            Write-Log "  SIN MAPPING: $n" -Level "WARNING"
+        }
+    }
+
+    if ($fallos.Count -eq 0) {
+        Write-Log "EXITO TOTAL: Todas las apps procesadas correctamente."
     }
     Write-Log "========================================================"
 }
 
-# ============================================================
-# ARRANQUE
-# ============================================================
 Start-ChocolateyMigration

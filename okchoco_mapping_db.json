@@ -157,9 +157,11 @@
   {
     "NombreOriginal": "Microsoft Visual Studio Code",
     "NombreChoco": "vscode",
-    "Categoria": "Desarrollo",
+    "Categoria": "Excluidas-Riesgo",
     "EsBloatware": false,
-    "Excluir": false
+    "Excluir": false,
+    "ExcluirMigracion": true,
+    "MotivoExclusion": "Extensions y settings.json en AppData - el usuario las gestiona manualmente"
   },
   {
     "NombreOriginal": "Sublime Text 3",
@@ -178,9 +180,11 @@
   {
     "NombreOriginal": "Python",
     "NombreChoco": "python",
-    "Categoria": "Desarrollo",
+    "Categoria": "Excluidas-Riesgo",
     "EsBloatware": false,
-    "Excluir": false
+    "Excluir": false,
+    "ExcluirMigracion": true,
+    "MotivoExclusion": "Entornos virtuales y paquetes pip - el usuario los gestiona manualmente"
   },
   {
     "NombreOriginal": "Java SE Development Kit",
@@ -192,9 +196,11 @@
   {
     "NombreOriginal": "Node.js",
     "NombreChoco": "nodejs",
-    "Categoria": "Desarrollo",
+    "Categoria": "Excluidas-Riesgo",
     "EsBloatware": false,
-    "Excluir": false
+    "Excluir": false,
+    "ExcluirMigracion": true,
+    "MotivoExclusion": "Paquetes globales npm - el usuario los gestiona manualmente"
   },
   {
     "NombreOriginal": "Docker Desktop",
@@ -262,23 +268,29 @@
   {
     "NombreOriginal": "GIMP",
     "NombreChoco": "gimp",
-    "Categoria": "Multimedia",
+    "Categoria": "Excluidas-Riesgo",
     "EsBloatware": false,
-    "Excluir": false
+    "Excluir": false,
+    "ExcluirMigracion": true,
+    "MotivoExclusion": "Scripts, brushes y plugins en AppData - el usuario los gestiona manualmente"
   },
   {
     "NombreOriginal": "Audacity",
     "NombreChoco": "audacity",
-    "Categoria": "Multimedia",
+    "Categoria": "Excluidas-Riesgo",
     "EsBloatware": false,
-    "Excluir": false
+    "Excluir": false,
+    "ExcluirMigracion": true,
+    "MotivoExclusion": "Plugins Nyquist/LADSPA y macros en AppData - el usuario las gestiona manualmente"
   },
   {
     "NombreOriginal": "OBS Studio",
     "NombreChoco": "obs-studio",
-    "Categoria": "Multimedia",
+    "Categoria": "Excluidas-Riesgo",
     "EsBloatware": false,
-    "Excluir": false
+    "Excluir": false,
+    "ExcluirMigracion": true,
+    "MotivoExclusion": "Escenas y plugins configurados - el usuario los gestiona manualmente"
   },
   {
     "NombreOriginal": "Steam",
@@ -444,9 +456,11 @@
   {
     "NombreOriginal": "VirtualBox",
     "NombreChoco": "virtualbox",
-    "Categoria": "Virtualización",
+    "Categoria": "Excluidas-Riesgo",
     "EsBloatware": false,
-    "Excluir": false
+    "Excluir": false,
+    "ExcluirMigracion": true,
+    "MotivoExclusion": "Config de red bridging - el usuario la gestiona manualmente"
   },
   {
     "NombreOriginal": "XAMPP",
@@ -542,9 +556,11 @@
   {
     "NombreOriginal": "Blender",
     "NombreChoco": "blender",
-    "Categoria": "Multimedia",
+    "Categoria": "Excluidas-Riesgo",
     "EsBloatware": false,
-    "Excluir": false
+    "Excluir": false,
+    "ExcluirMigracion": true,
+    "MotivoExclusion": "Add-ons y configuracion en AppData - el usuario los gestiona manualmente"
   },
   {
     "NombreOriginal": "JetBrains IntelliJ IDEA Community",
@@ -661,9 +677,11 @@
   {
     "NombreOriginal": "Inkscape",
     "NombreChoco": "inkscape",
-    "Categoria": "Multimedia",
+    "Categoria": "Excluidas-Riesgo",
     "EsBloatware": false,
-    "Excluir": false
+    "Excluir": false,
+    "ExcluirMigracion": true,
+    "MotivoExclusion": "Extensions y paletas custom - el usuario las gestiona manualmente"
   },
   {
     "NombreOriginal": "Microsoft Visual C++ 2015-2022 Redistributable (x86)",
@@ -822,9 +840,11 @@
   {
     "NombreOriginal": "Krita",
     "NombreChoco": "krita",
-    "Categoria": "Graficos",
+    "Categoria": "Excluidas-Riesgo",
     "EsBloatware": false,
-    "Excluir": false
+    "Excluir": false,
+    "ExcluirMigracion": true,
+    "MotivoExclusion": "Brushes y recursos custom en AppData - el usuario los gestiona manualmente"
   },
   {
     "NombreOriginal": "Autodesk AutoCAD",
@@ -1088,9 +1108,11 @@
   {
     "NombreOriginal": "Microsoft Visual Studio Installer",
     "NombreChoco": "vscode.install",
-    "Categoria": "Desarrollo",
+    "Categoria": "Excluidas-Riesgo",
     "EsBloatware": false,
-    "Excluir": false
+    "Excluir": false,
+    "ExcluirMigracion": true,
+    "MotivoExclusion": "Extensions y settings.json en AppData - el usuario las gestiona manualmente"
   },
   {
     "NombreOriginal": "Core Temp.*",

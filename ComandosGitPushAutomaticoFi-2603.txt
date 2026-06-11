@@ -54,4 +54,5 @@ Invoke-WebRequest "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/
 # descargar solo un archivo: MantenimientoSemanal.ps1 en MI COMPUTADORA: en las PC notebook's de CLIENTES !!
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/MantenimientoSemanal.ps1" -OutFile "C:\Users\Public\Documents\Automatico\MantenimientoSemanal.ps1"
 
+# para eliminar por remoto en pc de clientes !
 Remove-Item "C:\Users\Public\Documents\Automatico\config.json" -Force
