@@ -3,7 +3,14 @@
 # Script PowerShell 7 — Limpieza + Actualización Chocolatey + Telegram
 # Windows 10/11 | Requiere ejecución como Administrador
 # Log: C:\Users\Public\Documents\AutoTemp\
-# Modificado: 03/04/2026 21 hs
+# ------------------------------------------------------------------------------
+# Versión : 4.2
+# Cambios : - Whitelist en Eliminar-TareasInvasivas: array $whitelist con patrones
+#             (soporta wildcards) de tareas aprobadas que sobreviven aunque
+#             coincidan con la blacklist. "Core Temp Autostart *" protege el
+#             autostart legitimo de Core Temp en cualquier PC cliente.
+#             El check usa -like por patron antes de evaluar la blacklist.
+#             Log INFO cuando se omite una tarea por whitelist.
 # ------------------------------------------------------------------------------
 # Versión : 4.1
 # Cambios : - Fix: $script:AvisoVencimiento se inicializa ANTES del bloque de
@@ -447,8 +454,13 @@ function Eliminar-TareasInvasivas {
         "Glary","PCOptimizer","WinOptimizer","Auslogics","Malwarebytes",
         "Babylon","Conduit","OpenCandy","Reimage","SpeedUpMyPC",
         "iSkysoft","Wondershare",
-        "Core Temp","CoreTemp","Core Temp Autostart",
-        "PDFXChange","PDFXChangeAutoUpdate","TrackerUpdate"
+        "Core Temp","PDFXChange","PDFXChangeAutoUpdate","TrackerUpdate"
+    )
+
+    # Tareas aprobadas que NO deben eliminarse aunque coincidan con la blacklist.
+    # Soporta wildcards: "Core Temp Autostart *" protege la tarea en cualquier PC.
+    $whitelist = @(
+        "Core Temp Autostart *"
     )
 
     Write-Log "Buscando tareas programadas de software invasivo..." "INFO"
@@ -459,6 +471,12 @@ function Eliminar-TareasInvasivas {
         $todasLasTareas = Get-ScheduledTask -ErrorAction Stop
         foreach ($tarea in $todasLasTareas) {
             $nombreTarea = $tarea.TaskName
+            # Si la tarea coincide con algun patron de la whitelist, saltearla
+            $enWhitelist = $whitelist | Where-Object { $nombreTarea -like $_ }
+            if ($enWhitelist) {
+                Write-Log "Tarea en whitelist, omitida: '$nombreTarea'" "INFO"
+                continue
+            }
             $coincide = $blacklist | Where-Object { $nombreTarea -like "*$_*" }
             if ($coincide) {
                 try {
