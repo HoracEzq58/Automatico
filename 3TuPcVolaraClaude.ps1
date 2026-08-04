@@ -779,6 +779,15 @@ foreach ($svcName in $SERVICIOS_RED_PROTEGIDOS) {
 }
 Write-Log "--- [SECCION 18] Completada ---" "INFO" "Yellow"
 
+# Verificar CTF Loader // 28/07/2026 chatgpt
+if (-not (Get-Process ctfmon -ErrorAction SilentlyContinue)) {
+    Start-Process "$env:windir\System32\ctfmon.exe"
+    Write-Log "  [FIX] CTF Loader (ctfmon.exe) iniciado." "WARN" "Magenta"
+}
+else {
+    Write-Log "  [OK] CTF Loader ya estaba ejecutándose." "INFO" "Green"
+}
+
 #######################################################
 # SECCION 19 - AUTORAM: INSTALACION INTELIGENTE
 #######################################################
