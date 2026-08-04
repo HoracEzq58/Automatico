@@ -10,7 +10,7 @@ setlocal EnableDelayedExpansion
 chcp 1252 >nul
 
 set "pcname=%COMPUTERNAME%"
-set "outfile=%~dp0Reporte_%pcname%.txt"
+set "outfile=%~dp0%pcname%.txt"
 
 echo Generando reporte, aguarde...
 echo.

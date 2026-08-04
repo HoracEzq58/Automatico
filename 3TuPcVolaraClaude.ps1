@@ -1,11 +1,21 @@
 # ==============================================================================
-# Nombre Script: "3TuPcVolaraClaude.ps1" version 3
+# Nombre Script: "3TuPcVolaraClaude.ps1" version 4 04/08/2026
 # Basado en: "3TuPcVolaraClaude.ps1"	version 2
 # Revisado y corregido por: Claude (Anthropic) - 2026-03-10
 # Actualizado por: Claude (Anthropic) - 2026-03-16
 # Actualizado por: Claude (Anthropic) - 2026-06-02
 # Requiere: PowerShell 7 | Administrador | W10 IoT LTSC
 # ==============================================================================
+#
+# CAMBIOS 2026-08-04 (version 4):
+#
+#  [SECCION 9] Pagefile con multiplicador dinamico segun RAM:
+#              - RAM <= 4GB  -> 2.0x (mas colchon, equipos justos tipo Celeron/4GB)
+#              - RAM > 4GB   -> 1.5x (como antes)
+#              - Sigue siendo tamanio FIJO (min=max), no rango variable
+#              Agregado Enable-MMAgent -MC (Memory Compression) si no estaba activo
+#              Motivo: AIO Olga&Nino (Celeron J4005, 4GB single-channel) con CPU
+#              al 100% por presion de memoria real (Chrome), no por cache/standby
 #
 # CAMBIOS 2026-06-02 (manteniendo v3):
 #
@@ -344,11 +354,19 @@ try {
     } else {
         $totalMemoryMB = [math]::Round((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1KB, 0)
     }
-    Write-Log "  RAM detectada: $([math]::Round($totalMemoryMB/1024,2)) GB" "INFO" "Cyan"
+    $ramGBSec9 = [math]::Round($totalMemoryMB / 1024, 2)
+    Write-Log "  RAM detectada: $ramGBSec9 GB" "INFO" "Cyan"
 
-    $pageSize = [math]::Round($totalMemoryMB * 1.5, 0)
+    # Multiplicador dinamico: equipos con poca RAM (<=4GB) necesitan mas colchon
+    if ($ramGBSec9 -le 4) {
+        $multiplicador = 2.0
+    } else {
+        $multiplicador = 1.5
+    }
+
+    $pageSize = [math]::Round($totalMemoryMB * $multiplicador, 0)
     if ($pageSize -lt 2048) { $pageSize = 2048 }
-    Write-Log "  Pagefile calculado: $pageSize MB (1.5x RAM)" "INFO" "Cyan"
+    Write-Log "  Pagefile calculado: $pageSize MB (${multiplicador}x RAM)" "INFO" "Cyan"
 
     $computer = Get-CimInstance -ClassName Win32_ComputerSystem
     if ($computer.AutomaticManagedPagefile) {
@@ -359,7 +377,20 @@ try {
 
     $regPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
     Set-ItemProperty -Path $regPath -Name "PagingFiles" -Type MultiString -Value "C:\pagefile.sys $pageSize $pageSize"
-    Write-Log "  [OK] Memoria virtual fija configurada: $pageSize MB." "INFO" "Green"
+    Write-Log "  [OK] Memoria virtual fija configurada: $pageSize MB (min=max, sin rango)." "INFO" "Green"
+
+    # --- Memory Compression: ayuda a estirar la RAM en equipos justos ---
+    try {
+        $mmAgent = Get-MMAgent
+        if (-not $mmAgent.MemoryCompression) {
+            Enable-MMAgent -MC -ErrorAction Stop
+            Write-Log "  [OK] Memory Compression activado (requiere reinicio para aplicar)." "INFO" "Green"
+        } else {
+            Write-Log "  [i] Memory Compression ya estaba activo." "INFO" "Gray"
+        }
+    } catch {
+        Write-Log "  [WARN] No se pudo verificar/activar Memory Compression: $_" "WARN" "Yellow"
+    }
 } catch {
     Write-Log "  [ERROR] Error en memoria virtual: $_" "ERROR" "Red"
 }
