@@ -453,8 +453,7 @@ function Eliminar-TareasInvasivas {
         "Driver Booster","DriverBooster","Driver Easy","DriverEasy",
         "Glary","PCOptimizer","WinOptimizer","Auslogics","Malwarebytes",
         "Babylon","Conduit","OpenCandy","Reimage","SpeedUpMyPC",
-        "iSkysoft","Wondershare",
-        "Core Temp","PDFXChange","PDFXChangeAutoUpdate","TrackerUpdate"
+        "iSkysoft","Wondershare","PDFXChange","PDFXChangeAutoUpdate","TrackerUpdate"
     )
 
     # Tareas aprobadas que NO deben eliminarse aunque coincidan con la blacklist.

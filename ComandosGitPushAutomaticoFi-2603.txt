@@ -60,6 +60,10 @@ Rename-Item "C:\Users\Public\Documents\Automatico-main" "Automatico"
 # descargar solo un archivo:  en MI COMPUTADORA: MasterChef HEzqDaw o, en las PC notebook's de CLIENTES !!
 Invoke-WebRequest "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/SimilCPU-Z-Old-Machine.bat" -OutFile "$env:USERPROFILE\Downloads\SimilCPU-Z-Old-Machine.bat"
 
+# descargar solo un archivo LINUX:  en las PC notebook's de CLIENTES CON LINUX!!
+wget "https://raw.githubusercontent.com/HoracEzq58/Automatico-Linux/main/InstallAppsAutomatico-Linux.sh" -O ~/Documentos/Automatico/InstallAppsAutomatico-Linux.sh
+
+
 # descargar solo un archivo: MantenimientoSemanal.ps1 en MI COMPUTADORA: en las PC notebook's de CLIENTES !!
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/MantenimientoSemanal.ps1" -OutFile "C:\Users\Public\Documents\Automatico\MantenimientoSemanal.ps1"
 
