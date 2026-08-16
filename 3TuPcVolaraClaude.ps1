@@ -1,11 +1,26 @@
 # ==============================================================================
-# Nombre Script: "3TuPcVolaraClaude.ps1" version 4 04/08/2026
+# Nombre Script: "3TuPcVolaraClaude.ps1" version 5 16/08/2026
 # Basado en: "3TuPcVolaraClaude.ps1"	version 2
-# Revisado y corregido por: Claude (Anthropic) - 2026-03-10
+# Revisado y corregido por: Claude (Anthropic) - 10/03/2026
 # Actualizado por: Claude (Anthropic) - 2026-03-16
 # Actualizado por: Claude (Anthropic) - 2026-06-02
+# Actualizado por: Claude (Anthropic) - 2026-08-16
 # Requiere: PowerShell 7 | Administrador | W10 IoT LTSC
 # ==============================================================================
+#
+# CAMBIOS 2026-08-16 (version 5):
+#
+#  [ESTRUCTURA] Cada seccion (1 a 20) ahora es una funcion Invoke-SeccionNN.
+#               Se agregaron $RangoSecciones y $MenuInteractivo junto a los
+#               interruptores de siempre: permiten correr todo el script (como
+#               hasta ahora), correr una sola seccion, o un rango con saltos,
+#               sin comentar/descomentar nada a mano. Ver bloque INTERRUPTORES
+#               y bloque EJECUCION (antes del final del script).
+#
+#  [SECCION 19] Perfil AutoRAM separado en tres tramos en vez de dos:
+#               <=2GB "critico" (nuevo), 3-4GB "agresivo", 5-7GB "moderado".
+#               Antes un equipo de 2GB y uno de 4GB compartian el mismo
+#               umbral/intervalo; un 2GB necesita ser bastante mas agresivo.
 #
 # CAMBIOS 2026-08-04 (version 4):
 #
@@ -95,6 +110,11 @@ function Write-Log {
 # ==============================================================================
 $LlamarScript4 = $true    # $true  = llama al Script 4 al finalizar (normal)
                            # $false = termina sin llamar al Script 4 (debug)
+
+$RangoSecciones  = ""     # ""     = corre TODAS las secciones 1-20 (modo normal/automatico)
+                           # "19"   = corre SOLO la seccion 19
+                           # "1-5,10,15-18" = rango + sueltas + otro rango
+$MenuInteractivo = $false # $true  = pregunta con Read-Host que rango correr antes de arrancar
 # ==============================================================================
 
 # Lista de servicios de red que NUNCA deben tocarse
@@ -131,6 +151,17 @@ if (-not $isAdmin) {
 }
 Write-Log "Administrador: OK" "INFO" "Green"
 
+
+# ==============================================================================
+# SECCIONES CONVERTIDAS A FUNCIONES (2026-08-16, a pedido de Horacio)
+# Cada seccion es ahora una funcion Invoke-SeccionNN independiente. Los
+# interruptores/variables globales de arriba siguen funcionando igual que
+# siempre; lo unico que cambia es que ahora se puede elegir CUALES
+# secciones correr (rango, sueltas, salteadas) sin tocar nada mas.
+# ==============================================================================
+
+function Invoke-Seccion01 {
+    # Activacion de Windows
 #######################################################
 # SECCION 1 - ACTIVACION DE WINDOWS
 #######################################################
@@ -160,7 +191,10 @@ if ($dliCheck -match "Licenciado|Licensed") {
     }
 }
 Write-Log "--- [SECCION 1] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion02 {
+    # Iconos escritorio y entorno visual
 #######################################################
 # SECCION 2 - ICONOS ESCRITORIO Y ENTORNO VISUAL
 #######################################################
@@ -185,7 +219,10 @@ try {
     Write-Log "  [ERROR] Error en entorno de escritorio: $_" "ERROR" "Red"
 }
 Write-Log "--- [SECCION 2] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion03 {
+    # Deshabilitar notificaciones
 #######################################################
 # SECCION 3 - DESHABILITAR NOTIFICACIONES
 #######################################################
@@ -201,7 +238,10 @@ try {
     Write-Log "  [ERROR] Error al deshabilitar notificaciones: $_" "ERROR" "Red"
 }
 Write-Log "--- [SECCION 3] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion04 {
+    # Energia (alto rendimiento)
 #######################################################
 # SECCION 4 - ENERGIA (ALTO RENDIMIENTO)
 #######################################################
@@ -229,7 +269,10 @@ try {
     Write-Log "  [ERROR] Error en configuracion de energia: $_" "ERROR" "Red"
 }
 Write-Log "--- [SECCION 4] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion05 {
+    # Apps en segundo plano
 #######################################################
 # SECCION 5 - APPS EN SEGUNDO PLANO
 # Sin bloqueo global (rompia red, busqueda y VPN)
@@ -277,7 +320,10 @@ foreach ($app in $appsNoEsenciales) {
 }
 Write-Log "  [OK] Apps no esenciales deshabilitadas individualmente." "INFO" "Green"
 Write-Log "--- [SECCION 5] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion06 {
+    # Deshabilitar servicios de juego Xbox
 #######################################################
 # SECCION 6 - DESHABILITAR SERVICIOS DE JUEGO XBOX
 #######################################################
@@ -300,7 +346,10 @@ try {
     Write-Log "  [ERROR] Error al deshabilitar Xbox: $_" "ERROR" "Red"
 }
 Write-Log "--- [SECCION 6] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion07 {
+    # Windows Update - Delivery Optimization
 #######################################################
 # SECCION 7 - WINDOWS UPDATE - DELIVERY OPTIMIZATION
 #######################################################
@@ -321,7 +370,10 @@ try {
     Write-Log "  [ERROR] Error en Delivery Optimization: $_" "ERROR" "Red"
 }
 Write-Log "--- [SECCION 7] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion08 {
+    # Efectos visuales (maximo rendimiento)
 #######################################################
 # SECCION 8 - EFECTOS VISUALES (MAXIMO RENDIMIENTO)
 #######################################################
@@ -341,7 +393,10 @@ try {
     Write-Log "  [ERROR] Error en efectos visuales: $_" "ERROR" "Red"
 }
 Write-Log "--- [SECCION 8] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion09 {
+    # Memoria virtual (pagefile)
 #######################################################
 # SECCION 9 - MEMORIA VIRTUAL
 #######################################################
@@ -395,7 +450,10 @@ try {
     Write-Log "  [ERROR] Error en memoria virtual: $_" "ERROR" "Red"
 }
 Write-Log "--- [SECCION 9] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion10 {
+    # Servicios no esenciales
 #######################################################
 # SECCION 10 - SERVICIOS NO ESENCIALES
 #######################################################
@@ -470,7 +528,10 @@ foreach ($svcName in $SERVICIOS_RED_PROTEGIDOS) {
     }
 }
 Write-Log "--- [SECCION 10] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion11 {
+    # Prefetch / SysMain (inteligente v2)
 ##############################################################
 # SECCION 11 - PREFETCH / SYSMAIN (INTELIGENTE v2) 05/05/2026
 ##############################################################
@@ -548,7 +609,10 @@ catch {
 }
 
 Write-Log "--- [SECCION 11] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion12 {
+    # Windows Update y telemetria
 #######################################################
 # SECCION 12 - WINDOWS UPDATE Y TELEMETRIA
 #######################################################
@@ -570,7 +634,10 @@ foreach ($path in @(
 }
 Write-Log "  [OK] Telemetria desactivada." "INFO" "Green"
 Write-Log "--- [SECCION 12] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion13 {
+    # Desinstalar WMP, IE11 y Fax
 #######################################################
 # SECCION 13 - DESINSTALAR WMP, IE11 y FAX
 #######################################################
@@ -656,7 +723,10 @@ if (Test-Path $wmpShortcut) {
 
 Write-Log "  [OK] Erradicacion profunda WMP completada." "INFO" "Green"
 Write-Log "--- [SECCION 13] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion14 {
+    # Limpieza de archivos temporales
 #######################################################
 # SECCION 14 - LIMPIEZA DE ARCHIVOS TEMPORALES
 #######################################################
@@ -676,7 +746,10 @@ ipconfig /flushdns | Out-Null
 Remove-Item "$env:LOCALAPPDATA\IconCache.db" -Force -ErrorAction SilentlyContinue
 Write-Log "  [OK] Temporales eliminados y DNS limpiado." "INFO" "Green"
 Write-Log "--- [SECCION 14] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion15 {
+    # Programas de inicio
 #######################################################
 # SECCION 15 - PROGRAMAS DE INICIO
 #######################################################
@@ -718,7 +791,10 @@ Get-ScheduledTask | Where-Object {
 }
 Write-Log "  [OK] Inicio limpiado." "INFO" "Green"
 Write-Log "--- [SECCION 15] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion16 {
+    # Tareas programadas pesadas
 #######################################################
 # SECCION 16 - TAREAS PROGRAMADAS PESADAS
 #######################################################
@@ -756,7 +832,10 @@ foreach ($taskPath in @(
 }
 Write-Log "  [OK] $disabledCount tareas deshabilitadas." "INFO" "Green"
 Write-Log "--- [SECCION 16] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion17 {
+    # Optimizaciones finales de registro
 #######################################################
 # SECCION 17 - OPTIMIZACIONES FINALES DE REGISTRO
 #######################################################
@@ -773,7 +852,10 @@ Write-Log "  [OK] Menus acelerados (50ms)." "INFO" "Green"
 
 Write-Log "  [SEGURO] Activity Feed conservado (menu Inicio y busqueda funcionan)." "WARN" "Yellow"
 Write-Log "--- [SECCION 17] Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion18 {
+    # Verificacion final de servicios (+ CTF Loader check)
 #######################################################
 # SECCION 18 - VERIFICACION FINAL DE SERVICIOS
 #######################################################
@@ -818,7 +900,10 @@ if (-not (Get-Process ctfmon -ErrorAction SilentlyContinue)) {
 else {
     Write-Log "  [OK] CTF Loader ya estaba ejecutándose." "INFO" "Green"
 }
+}
 
+function Invoke-Seccion19 {
+    # AutoRAM - instalacion inteligente
 #######################################################
 # SECCION 19 - AUTORAM: INSTALACION INTELIGENTE
 #######################################################
@@ -850,7 +935,15 @@ try {
     }
     else {
         # Definir perfil segun RAM
-        if ($ramGB -le 4) {
+        # 2026-08-16: separado el tramo <=4GB en dos, porque un equipo de 2GB
+        # y uno de 4GB no sufren lo mismo (esto era lo que faltaba, "los 5 pal peso")
+        if ($ramGB -le 2) {
+            $perfil      = "critico"
+            $umbralPct   = 50
+            $intervaloSeg = 180   # 3 minutos
+            $cooldownSeg  = 300   # 5 minutos entre limpiezas
+        }
+        elseif ($ramGB -le 4) {
             $perfil      = "agresivo"
             $umbralPct   = 60
             $intervaloSeg = 300   # 5 minutos
@@ -939,7 +1032,10 @@ catch {
 }
 
 Write-Log "--- [SECCION 19] AutoRAM Completada ---" "INFO" "Yellow"
+}
 
+function Invoke-Seccion20 {
+    # Llamado al Script 4
 #######################################################
 # SECCION 20 - LLAMADO AL SCRIPT 4
 #######################################################
@@ -967,6 +1063,103 @@ if (-not $LlamarScript4) {
     Write-Log "  Ejecutalo manualmente cuando estes listo." "INFO" "White"
 }
 Write-Log "--- [SECCION 20] Completada ---" "INFO" "Yellow"
+}
+
+# ==============================================================================
+# EJECUCION - que secciones correr
+# ==============================================================================
+# Se maneja con las mismas variables "interruptor" de arriba ($RangoSecciones y
+# $MenuInteractivo), para no romper la logica de automatizacion/cadena de scripts.
+#
+#   $RangoSecciones = ""                -> corre TODAS (1 a 20), modo normal/automatico
+#   $RangoSecciones = "19"              -> corre SOLO la seccion 19 (AutoRAM)
+#   $RangoSecciones = "1-5,10,15-18"    -> corre un rango + sueltas + otro rango
+#   $MenuInteractivo = $true            -> te pregunta el rango con Read-Host antes
+#                                          de arrancar (ignora $RangoSecciones si
+#                                          contestas algo; Enter vacio = todas)
+# ==============================================================================
+
+$TablaSecciones = [ordered]@{
+     1 = "Activacion de Windows"
+     2 = "Iconos escritorio y entorno visual"
+     3 = "Deshabilitar notificaciones"
+     4 = "Energia (alto rendimiento)"
+     5 = "Apps en segundo plano"
+     6 = "Deshabilitar servicios de juego Xbox"
+     7 = "Windows Update - Delivery Optimization"
+     8 = "Efectos visuales (maximo rendimiento)"
+     9 = "Memoria virtual (pagefile)"
+    10 = "Servicios no esenciales"
+    11 = "Prefetch / SysMain (inteligente v2)"
+    12 = "Windows Update y telemetria"
+    13 = "Desinstalar WMP, IE11 y Fax"
+    14 = "Limpieza de archivos temporales"
+    15 = "Programas de inicio"
+    16 = "Tareas programadas pesadas"
+    17 = "Optimizaciones finales de registro"
+    18 = "Verificacion final de servicios (+ CTF Loader)"
+    19 = "AutoRAM - instalacion inteligente"
+    20 = "Llamado al Script 4"
+}
+
+function ConvertTo-RangoSecciones {
+    param([string]$Texto)
+    $resultado = [System.Collections.Generic.List[int]]::new()
+    if ([string]::IsNullOrWhiteSpace($Texto)) {
+        return @(1..20)
+    }
+    foreach ($parte in ($Texto -split ",")) {
+        $p = $parte.Trim()
+        if ($p -eq "") { continue }
+        if ($p -match '^\d+-\d+$') {
+            $ini, $fin = $p -split '-'
+            $ini = [int]$ini; $fin = [int]$fin
+            if ($ini -gt $fin) { $tmp = $ini; $ini = $fin; $fin = $tmp }
+            foreach ($n in $ini..$fin) { if ($n -ge 1 -and $n -le 20) { $resultado.Add($n) } }
+        } elseif ($p -match '^\d+$') {
+            $n = [int]$p
+            if ($n -ge 1 -and $n -le 20) { $resultado.Add($n) }
+        } else {
+            Write-Log "  [WARN] Fragmento de rango no entendido, se ignora: '$p'" "WARN" "Yellow"
+        }
+    }
+    return ($resultado | Sort-Object -Unique)
+}
+
+function Show-MenuSecciones {
+    Write-Host ""
+    Write-Host "=============================================" -ForegroundColor Cyan
+    Write-Host "  3TuPcVolaraClaude - Selector de secciones" -ForegroundColor Cyan
+    Write-Host "=============================================" -ForegroundColor Cyan
+    foreach ($n in 1..20) {
+        Write-Host ("  {0,2} - {1}" -f $n, $TablaSecciones[$n])
+    }
+    Write-Host ""
+    Write-Host "Ejemplos: 19  /  1-5,10,15-18  /  9,11,19" -ForegroundColor Gray
+    $entrada = Read-Host "Que secciones queres correr? (Enter = todas, 1 a 20)"
+    return $entrada
+}
+
+if ($MenuInteractivo) {
+    $entradaMenu = Show-MenuSecciones
+    $SeccionesAEjecutar = ConvertTo-RangoSecciones -Texto $entradaMenu
+} else {
+    $SeccionesAEjecutar = ConvertTo-RangoSecciones -Texto $RangoSecciones
+}
+
+Write-Log "" "INFO" "White"
+Write-Log "Secciones a ejecutar: $($SeccionesAEjecutar -join ', ')" "INFO" "Cyan"
+Write-Log "" "INFO" "White"
+
+foreach ($n in $SeccionesAEjecutar) {
+    $fn = "Invoke-Seccion{0:D2}" -f $n
+    if (Get-Command $fn -ErrorAction SilentlyContinue) {
+        & $fn
+    } else {
+        Write-Log "  [WARN] No existe la funcion $fn (seccion $n) - se ignora." "WARN" "Yellow"
+    }
+}
+
 
 # ==============================================================================
 # FIN DEL SCRIPT
