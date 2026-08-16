@@ -114,7 +114,7 @@ $LlamarScript4 = $true    # $true  = llama al Script 4 al finalizar (normal)
 $RangoSecciones  = ""     # ""     = corre TODAS las secciones 1-20 (modo normal/automatico)
                            # "19"   = corre SOLO la seccion 19
                            # "1-5,10,15-18" = rango + sueltas + otro rango
-$MenuInteractivo = $false # $true  = pregunta con Read-Host que rango correr antes de arrancar
+$MenuInteractivo = $true # $true  = pregunta con Read-Host que rango correr antes de arrancar
 # ==============================================================================
 
 # Lista de servicios de red que NUNCA deben tocarse
