@@ -4,6 +4,17 @@
 # Windows 10/11 | Requiere ejecución como Administrador
 # Log: C:\Users\Public\Documents\AutoTemp\
 # ------------------------------------------------------------------------------
+# Versión : 4.3
+# Cambios : - Nueva funcion Invoke-ProcesoConTimeout: reemplaza Start-Process -Wait
+#             (sin limite) por WaitForExit(ms) con timeout configurable. Si el
+#             proceso se cuelga, mata el arbol con taskkill /T /F y devuelve
+#             codigo sentinela -999 en vez de trabar el script para siempre.
+#           - Aplicado a las 3 llamadas a choco (Modulo 2 intento 1, intento 2
+#             con --ignore-checksums, y Modulo 7 paquetes postergados).
+#             Motivo: log del 2026-08-21 en MasterChef PC murio a mitad de
+#             "choco upgrade all" sin ningun error, dejando 7 paquetes sin
+#             actualizar durante dias hasta la deteccion manual.
+# ------------------------------------------------------------------------------
 # Versión : 4.2
 # Cambios : - Whitelist en Eliminar-TareasInvasivas: array $whitelist con patrones
 #             (soporta wildcards) de tareas aprobadas que sobreviven aunque
@@ -659,6 +670,45 @@ function Iniciar-Limpieza {
 }
 
 # ------------------------------------------------------------------------------
+# FUNCIÓN: EJECUCIÓN DE PROCESOS CON TIMEOUT
+# ------------------------------------------------------------------------------
+# Start-Process -Wait no tiene limite de tiempo propio: si choco (u otro
+# proceso hijo, ej. msiexec) se cuelga esperando red, el script entero queda
+# congelado para siempre. Esta funcion reemplaza -Wait por WaitForExit(ms) y,
+# si se vence el timeout, mata el arbol de procesos con taskkill /T /F.
+# ------------------------------------------------------------------------------
+
+function Invoke-ProcesoConTimeout {
+    param(
+        [string]$FilePath,
+        [string]$ArgumentList,
+        [string]$RedirectOut,
+        [string]$RedirectErr,
+        [int]$TimeoutSec = 1200
+    )
+
+    $proc = Start-Process -FilePath $FilePath `
+                          -ArgumentList $ArgumentList `
+                          -RedirectStandardOutput $RedirectOut `
+                          -RedirectStandardError  $RedirectErr `
+                          -NoNewWindow -PassThru
+
+    $terminoATiempo = $proc.WaitForExit($TimeoutSec * 1000)
+
+    if (-not $terminoATiempo) {
+        Write-Log "Proceso '$FilePath' (PID $($proc.Id)) supero el timeout de $TimeoutSec segundos. Matando arbol de procesos..." "WARN"
+        try {
+            Start-Process -FilePath "taskkill.exe" -ArgumentList "/PID $($proc.Id) /T /F" -Wait -NoNewWindow -ErrorAction SilentlyContinue | Out-Null
+        } catch {
+            Write-Log "No se pudo matar el proceso colgado (PID $($proc.Id)): $_" "WARN"
+        }
+        return -999   # codigo sentinela: timeout, no confundir con codigo real de choco
+    }
+
+    try { return $proc.ExitCode } catch { return -1 }
+}
+
+# ------------------------------------------------------------------------------
 # MÓDULO 2 — ACTUALIZACIÓN CHOCOLATEY
 # ------------------------------------------------------------------------------
 
@@ -682,12 +732,10 @@ function Iniciar-Chocolatey {
     $tempErr = "$logDir\choco_error.tmp"
 
     try {
-        # --- Intento 1: choco upgrade normal ---
-        $proc = Start-Process -FilePath "choco" `
+        # --- Intento 1: choco upgrade normal (timeout 20 min) ---
+        $exitCode1 = Invoke-ProcesoConTimeout -FilePath "choco" `
                               -ArgumentList "upgrade all -y --no-progress --except=""rustdesk.install,powershell-core""" `
-                              -RedirectStandardOutput $tempOut `
-                              -RedirectStandardError  $tempErr `
-                              -NoNewWindow -PassThru -Wait
+                              -RedirectOut $tempOut -RedirectErr $tempErr -TimeoutSec 1200
 
         if (Test-Path $tempOut) {
             $salida1 = Get-Content $tempOut
@@ -702,19 +750,15 @@ function Iniciar-Chocolatey {
         $salida2      = $null
         $lineaResumen = $null
 
-        # Leer ExitCode con try/catch para evitar error de assembly en .NET 9/10
-        $exitCode1 = 0
-        try { $exitCode1 = $proc.ExitCode } catch { $exitCode1 = -1 }
-
-        if ($exitCode1 -ne 0) {
+        if ($exitCode1 -eq -999) {
+            Write-Log "choco upgrade all se colgo y fue terminado por timeout. Se omite el reintento para no arriesgar otro cuelgue." "ERROR"
+        } elseif ($exitCode1 -ne 0) {
             Write-Log "choco upgrade all termino con codigo $exitCode1. Reintentando con --ignore-checksums..." "WARN"
 
-            # --- Intento 2: choco upgrade con --ignore-checksums ---
-            $proc2 = Start-Process -FilePath "choco" `
+            # --- Intento 2: choco upgrade con --ignore-checksums (timeout 20 min) ---
+            $exitCode2 = Invoke-ProcesoConTimeout -FilePath "choco" `
                                    -ArgumentList "upgrade all --ignore-checksums -y --no-progress --except=""rustdesk.install,powershell-core""" `
-                                   -RedirectStandardOutput $tempOut `
-                                   -RedirectStandardError  $tempErr `
-                                   -NoNewWindow -PassThru -Wait
+                                   -RedirectOut $tempOut -RedirectErr $tempErr -TimeoutSec 1200
 
             if (Test-Path $tempOut) {
                 $salida2 = Get-Content $tempOut
@@ -726,11 +770,9 @@ function Iniciar-Chocolatey {
                 Remove-Item $tempErr -Force -ErrorAction SilentlyContinue
             }
 
-            # Leer ExitCode del intento 2 también con try/catch
-            $exitCode2 = 0
-            try { $exitCode2 = $proc2.ExitCode } catch { $exitCode2 = -1 }
-
-            if ($exitCode2 -ne 0) {
+            if ($exitCode2 -eq -999) {
+                Write-Log "choco upgrade --ignore-checksums tambien se colgo y fue terminado por timeout." "ERROR"
+            } elseif ($exitCode2 -ne 0) {
                 Write-Log "choco upgrade --ignore-checksums termino con errores (codigo $exitCode2). Revisa el log." "ERROR"
             } else {
                 Write-Log "Actualizacion con --ignore-checksums completada exitosamente." "OK"
@@ -1148,11 +1190,13 @@ function Actualizar-PaquetesPostergados {
     foreach ($pkg in $paquetes) {
         Write-Log "Actualizando paquete postergado: $pkg" "INFO"
         try {
-            $p = Start-Process -FilePath "choco" `
+            $exitCode7 = Invoke-ProcesoConTimeout -FilePath "choco" `
                                -ArgumentList "upgrade $pkg -y --no-progress" `
-                               -RedirectStandardOutput $tempOut7 `
-                               -RedirectStandardError  $tempErr7 `
-                               -NoNewWindow -PassThru -Wait
+                               -RedirectOut $tempOut7 -RedirectErr $tempErr7 -TimeoutSec 600
+
+            if ($exitCode7 -eq -999) {
+                Write-Log "Actualizacion de '$pkg' se colgo y fue terminada por timeout." "ERROR"
+            }
 
             if (Test-Path $tempOut7) {
                 Get-Content $tempOut7 | ForEach-Object { Write-Log $_ "INFO" }
@@ -1163,12 +1207,9 @@ function Actualizar-PaquetesPostergados {
                 Remove-Item $tempErr7 -Force -ErrorAction SilentlyContinue
             }
 
-            $exitCode7 = 0
-            try { $exitCode7 = $p.ExitCode } catch { $exitCode7 = -1 }
-
             if ($exitCode7 -eq 0) {
                 Write-Log "Paquete '$pkg' actualizado correctamente." "OK"
-            } else {
+            } elseif ($exitCode7 -ne -999) {
                 Write-Log "choco upgrade $pkg termino con codigo $exitCode7." "WARN"
             }
         } catch {
