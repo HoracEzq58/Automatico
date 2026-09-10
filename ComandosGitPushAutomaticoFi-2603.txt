@@ -64,8 +64,31 @@ Invoke-WebRequest "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/
 wget "https://raw.githubusercontent.com/HoracEzq58/Automatico-Linux/main/InstallAppsAutomatico-Linux.sh" -O ~/Documentos/Automatico/InstallAppsAutomatico-Linux.sh
 
 
-# descargar solo un archivo: MantenimientoSemanal.ps1 en MI COMPUTADORA: en las PC notebook's de CLIENTES !!
+# descargar solo un archivo: MantenimientoSemanal.ps1 en las PC notebook's de CLIENTES !!
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/MantenimientoSemanal.ps1" -OutFile "C:\Users\Public\Documents\Automatico\MantenimientoSemanal.ps1"
+
+# descargar solo un archivo: MantenimientoSemanal.ps1 en las PC notebook's de CLIENTES !!
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/1Fi-2601-AutomaticoClaude.ps1" -OutFile "C:\Users\Public\Documents\Automatico\1Fi-2601-AutomaticoClaude.ps1"
+
+
+
+
 
 # para eliminar por remoto en pc de clientes !
 Remove-Item "C:\Users\Public\Documents\Automatico\config.json" -Force
+
+
+
+New-Item -ItemType Directory -Force -Path "C:\Temp_Work" -ErrorAction SilentlyContinue;
+curl -L "https://github.com/HoracEzq58/Automatico/archive/refs/heads/main.zip" -o "C:\Temp_Work\Automatico.zip";
+Expand-Archive "C:\Temp_Work\Automatico.zip" -DestinationPath "C:\Temp_Work" -Force;
+Remove-Item "$env:PUBLIC\Documents\Automatico" -Recurse -Force -ErrorAction SilentlyContinue;
+Move-Item "C:\Temp_Work\Automatico-main" "$env:PUBLIC\Documents\Automatico" -Force;
+Remove-Item "C:\Temp_Work" -Recurse -Force -ErrorAction SilentlyContinue;
+
+# 1. Crear carpeta de trabajo temporal
+# 2. Descargar tu archivo real con curl (evita cuelgues de Invoke-WebRequest)
+# 3. Descomprimir en la carpeta temporal
+# 4. Borrar la carpeta vieja usando la ruta universal de Windows
+# 5. Mover y renombrar tu carpeta actualizada a su lugar final
+# 6. Limpiar los archivos temporales del disco
