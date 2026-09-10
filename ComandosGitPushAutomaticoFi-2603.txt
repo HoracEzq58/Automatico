@@ -68,7 +68,7 @@ wget "https://raw.githubusercontent.com/HoracEzq58/Automatico-Linux/main/Install
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/MantenimientoSemanal.ps1" -OutFile "C:\Users\Public\Documents\Automatico\MantenimientoSemanal.ps1"
 
 # descargar solo un archivo: Fi-2601-AutomaticoClaude.ps1 en las PC notebook's de CLIENTES !!
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/1Fi-2601-AutomaticoClaude.ps1" -OutFile "C:\Users\Public\Documents\Automatico\1Fi-2601-AutomaticoClaude.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/HoracEzq58/Automatico/main/1Fi-2601-AutomaticoClaude.ps1" -OutFile "C:\Users\Public\Downloads\1Fi-2601-AutomaticoClaude.ps1"
 
 # para eliminar por remoto en pc de clientes !
 Remove-Item "C:\Users\Public\Documents\Automatico\config.json" -Force
