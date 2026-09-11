@@ -39,6 +39,7 @@ git clone https://github.com/HoracEzq58/Fi-2603.git "C:\Users\Public\Pictures\Fi
 git clone https://github.com/HoracEzq58/Automatico.git "C:\Users\Public\Documents\Automatico"
 
 # descargar carpeta completa si lo hago en PC CLIENTES (no tienen Git) 
+Set-Location "C:\Users\Public\Documents"
 Remove-Item "C:\Users\Public\Pictures\Fi-2603" -Recurse -Force -ErrorAction SilentlyContinue;
 Invoke-WebRequest "https://github.com/HoracEzq58/Fi-2603/archive/refs/heads/main.zip" -OutFile "C:\Users\Public\Pictures\Fi-2603.zip";
 Expand-Archive "C:\Users\Public\Pictures\Fi-2603.zip" -DestinationPath "C:\Users\Public\Pictures" -Force;
@@ -46,6 +47,7 @@ Remove-Item "C:\Users\Public\Pictures\Fi-2603.zip";
 Rename-Item "C:\Users\Public\Pictures\Fi-2603-main" "Fi-2603"
 
 # descargar carpeta completa si lo hago en PC CLIENTES (no tienen Git) 
+Set-Location "C:\Users\Public\Documents"
 Remove-Item "C:\Users\Public\Documents\Automatico" -Recurse -Force -ErrorAction SilentlyContinue;
 Invoke-WebRequest "https://github.com/HoracEzq58/Automatico/archive/refs/heads/main.zip" -OutFile "C:\Users\Public\Documents\Automatico.zip";
 Expand-Archive "C:\Users\Public\Documents\Automatico.zip" -DestinationPath "C:\Users\Public\Documents" -Force;
