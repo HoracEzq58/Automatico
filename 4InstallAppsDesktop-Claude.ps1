@@ -1,11 +1,11 @@
-# ==============================================================================
-# Nombre Script: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"		version 4
+# ================================================================================
+# Nombre Script: "4InstallAppsDesktop-Claude.ps1" version 6 (unificada) 12/09/2026
 # Basado en: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"			version 3
 # Reescrito por: Claude (Anthropic) - 2026-09-12
 # Requiere: PowerShell 7 | Administrador | Chocolatey instalado
 # Flujo: 1)Instalar -> 1.5)ConfigEverything -> 2)Verificar faltantes ->
 #        3)Renombrar SSD -> 3.5)EmptyStandbyList -> FIN (sin Script 5)
-# ==============================================================================
+# ================================================================================
 #
 # CAMBIOS v4 (2026-09-12):
 #
@@ -481,6 +481,8 @@ Write-Log "--- [PASO 3.5] Completado ---" "INFO" "Yellow"
 # ==============================================================================
 # FIN DEL SCRIPT
 # S5 queda descartado (ver Script 1) - no hay llamado a ningun script mas.
+# Reinicio automatico: el rename de equipo (S2) y los cambios de DISM /
+# Memory Compression (S3) necesitan un reboot para terminar de aplicarse.
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "=============================================" "INFO" "Magenta"
@@ -488,5 +490,9 @@ Write-Log "  4ExtraeNew-InstallAppsDesktop-Claude-v4.ps1  FIN" "INFO" "Green"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Log       : $global:LogFile" "INFO" "Cyan"
 Write-Log "" "INFO" "White"
-Write-Log "DESPLIEGUE COMPLETO. Sin mas scripts en la cadena." "INFO" "Green"
+Write-Log "DESPLIEGUE COMPLETO. Reiniciando equipo en 5 segundos..." "INFO" "Green"
+Write-Log "(rename de equipo, DISM y Memory Compression necesitan este reinicio)" "INFO" "Gray"
 Write-Log "" "INFO" "White"
+
+Start-Sleep -Seconds 5
+Restart-Computer -Force

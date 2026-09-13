@@ -1,5 +1,5 @@
 # ==============================================================================
-# Nombre Script: "3TuPcVolaraClaude.ps1" version 5 16/08/2026
+# Nombre Script: "3TuPcVolaraClaude.ps1" version 6 (unificada) 12/09/2026
 # Basado en: "3TuPcVolaraClaude.ps1"	version 2
 # Revisado y corregido por: Claude (Anthropic) - 10/03/2026
 # Actualizado por: Claude (Anthropic) - 2026-03-16

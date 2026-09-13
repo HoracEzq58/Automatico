@@ -1,5 +1,5 @@
 # ==============================================================================
-# Nombre Script: "2RenameLaptop-Desktop-Claude.ps1" version 5
+# Nombre Script: "2RenameLaptop-Desktop-Claude.ps1" version 6 (unificada) 12/09/2026
 # Basado en: "2RenameLaptop-Desktop-Claude.ps1" version 4
 # Reescrito por: Claude (Anthropic) - 2026-09-12
 # Requiere: PowerShell 7 | Administrador | W10/W11 IoT LTSC

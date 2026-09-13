@@ -1,5 +1,5 @@
 # ==============================================================================
-# Nombre Script: "1Fi-2609-AutomaticoClaude.ps1"
+# Nombre Script: "1Fi-2609-AutomaticoClaude.ps1" version 6 (unificada) 12/09/2026
 # Basado en: "1Fi-2601-AutomaticoClaude.ps1"
 # Reescrito por: Claude (Anthropic) - 2026-09-12
 # Requiere: PowerShell 5 (compatible con W10 IoT LTSC recien instalado)
