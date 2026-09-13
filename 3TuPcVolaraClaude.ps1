@@ -8,6 +8,16 @@
 # Requiere: PowerShell 7 | Administrador | W10 IoT LTSC
 # ==============================================================================
 #
+# CAMBIOS 2026-09-12 (version 6):
+#
+#  [PARAM] Agregado -ModoCadena: si el S2 llama a este script, lo hace con
+#          -ModoCadena y las 20 secciones corren directo, sin Read-Host. El
+#          menu interactivo ($MenuInteractivo) queda solo para cuando se
+#          corre el S3 solo, suelto, para "tunear" que secciones probar.
+#
+#  [MENU]  ConvertTo-RangoSecciones acepta "0" como sinonimo de Enter/vacio
+#          (todas las secciones).
+#
 # CAMBIOS 2026-08-16 (version 5):
 #
 #  [ESTRUCTURA] Cada seccion (1 a 20) ahora es una funcion Invoke-SeccionNN.
@@ -63,6 +73,14 @@
 # ==============================================================================
 # ADVERTENCIA: Ejecutar siempre como Administrador
 # ==============================================================================
+
+param(
+    [switch]$ModoCadena   # Lo pasa el S2 cuando llama a este script. Si esta
+                          # presente, se corren las 20 secciones sin preguntar
+                          # nada (ni menu ni Read-Host). Sin este switch, el
+                          # script se comporta como siempre (respeta
+                          # $MenuInteractivo / $RangoSecciones de abajo).
+)
 
 # ==============================================================================
 # CONFIGURACION GLOBAL Y LOGGING
@@ -1105,7 +1123,7 @@ $TablaSecciones = [ordered]@{
 function ConvertTo-RangoSecciones {
     param([string]$Texto)
     $resultado = [System.Collections.Generic.List[int]]::new()
-    if ([string]::IsNullOrWhiteSpace($Texto)) {
+    if ([string]::IsNullOrWhiteSpace($Texto) -or $Texto.Trim() -eq "0") {
         return @(1..20)
     }
     foreach ($parte in ($Texto -split ",")) {
@@ -1135,12 +1153,16 @@ function Show-MenuSecciones {
         Write-Host ("  {0,2} - {1}" -f $n, $TablaSecciones[$n])
     }
     Write-Host ""
-    Write-Host "Ejemplos: 19  /  1-5,10,15-18  /  9,11,19" -ForegroundColor Gray
-    $entrada = Read-Host "Que secciones queres correr? (Enter = todas, 1 a 20)"
+    Write-Host "Ejemplos: 19  /  1-5,10,15-18  /  9,11,19  /  0 (= todas)" -ForegroundColor Gray
+    $entrada = Read-Host "Que secciones queres correr? (Enter o 0 = todas, 1 a 20)"
     return $entrada
 }
 
-if ($MenuInteractivo) {
+if ($ModoCadena) {
+    # Llamado desde el S2: se infiere que van las 20 secciones, sin preguntar nada.
+    $SeccionesAEjecutar = @(1..20)
+    Write-Log "Modo cadena (llamado desde S2): las 20 secciones corren directo." "INFO" "Cyan"
+} elseif ($MenuInteractivo) {
     $entradaMenu = Show-MenuSecciones
     $SeccionesAEjecutar = ConvertTo-RangoSecciones -Texto $entradaMenu
 } else {

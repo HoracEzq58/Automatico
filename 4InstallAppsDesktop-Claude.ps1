@@ -1,79 +1,53 @@
 # ==============================================================================
-# Nombre Script: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"		version 3
-# Basado en: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"			version 2
-# Revisado y corregido por: Claude (Anthropic) - 2026-03-10
-# Actualizado por: Claude (Anthropic) - 2026-03-16
-# Actualizado por: Claude (Anthropic) - 2026-03-19
-# Actualizado por: Claude (Anthropic) - 2026-06-02
+# Nombre Script: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"		version 4
+# Basado en: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"			version 3
+# Reescrito por: Claude (Anthropic) - 2026-09-12
 # Requiere: PowerShell 7 | Administrador | Chocolatey instalado
 # Flujo: 1)Instalar -> 1.5)ConfigEverything -> 2)Verificar faltantes ->
-#        3)Limpiar sobrantes -> 3.5)Actualizar -> 4)Renombrar SSD -> llamar Script 5
+#        3)Renombrar SSD -> 3.5)EmptyStandbyList -> FIN (sin Script 5)
 # ==============================================================================
 #
-# CAMBIOS vs v1:
+# CAMBIOS v4 (2026-09-12):
 #
-#  [CAMBIO 1] PASO 4 eliminado (backup + sobreescritura del config)
-#             El config del pendrive ya NO tiene versiones fijas -> instala
-#             siempre la ultima version disponible. No tiene sentido pisarlo
-#             con lo que quedo instalado (ese flujo causaba config truncado
-#             si algun paquete no se instalo correctamente en el Paso 1).
-#             El antiguo Paso 5 (Renombrar SSD) pasa a ser Paso 4.
+#  [PASO 1] Bajado de 3 a 2 intentos para el config completo: normal y
+#           --ignore-checksums. Se saca el 3er intento con --force a nivel
+#           config completo (mas riesgo que beneficio real segun experiencia
+#           de campo). El Paso 2 sigue haciendo de control: compara maestro
+#           vs instalado y reintenta individualmente los que falten, ahi si
+#           con --force como ultimo recurso (Install-ChocoConReintentos,
+#           sin cambios) porque ahi el riesgo es acotado a un solo paquete.
 #
-#  [CAMBIO 2] Markdown eliminado (ya no se genera packages-list.md)
-#             Al eliminar el Paso 4, el markdown pierde su razon de ser.
+#  [PASO 1.5] BUG REAL CORREGIDO: la clave usada para Everything.ini era
+#           "hide_empty_search_results", que no existe. La clave real,
+#           documentada por voidtools, es "hide_results_when_search_is_empty"
+#           (asi lo tenia bien el script suelto ConfigEverything.ps1). Se
+#           suman ademas las mismas configuraciones extra de ese script:
+#           exclude_system_files, exclude_hidden_files, show_status_bar=0,
+#           match_path=0. Al final se reinicia Everything.exe.
 #
-#  [CAMBIO 3] Nombre del config corregido a "InstallAppsDesktop-Automatico.config"
-#             (Desktop con D minuscula, consistente con el pendrive)
+#  [PASO 3 Y 3.5 ELIMINADOS] (antes "revisar sobrantes" y "actualizar todos
+#           los paquetes"). En una instalacion limpia con el config maestro
+#           homologado no tienen nada que hacer: no hay sobrantes ni nada
+#           para actualizar (el config sin versiones fijas ya instalo la
+#           ultima version disponible en el Paso 1). Ademas duplican lo que
+#           ya hace MantenimientoSemanal semanalmente en cada cliente
+#           (incluyendo la misma exclusion de rustdesk.install del upgrade).
+#           Sacarlos deja este script SIN NINGUN Read-Host: el ultimo que
+#           quedaba era el "Desinstalar 'x'? (s/n)" del viejo Paso 3.
+#           Los antiguos Paso 4 y Paso 4.5 se renumeran a Paso 3 y Paso 3.5.
 #
-#  [CAMBIO 4] Reintentos progresivos en Paso 1 (instalacion inicial):
-#             - Intento 1: choco install normal
-#             - Intento 2: + --ignore-checksums
-#             - Intento 3: + --ignore-checksums --force
-#             El error mas comun de choco en instalaciones limpias es checksum.
+#  [FIN DE SCRIPT] Se elimina el bloque completo de llamado al Script 5
+#           (no solo el flag $LlamarScript5) porque S5 quedo descartado.
 #
-#  [CAMBIO 5] Reintentos progresivos en Paso 2 (reinstalacion de faltantes):
-#             Misma logica: normal -> --ignore-checksums -> --ignore-checksums --force
+# ==============================================================================
+# CAMBIOS HEREDADOS DE v3 (se mantienen):
 #
-# CAMBIOS 2026-03-16 (manteniendo v2):
-#
-#  [PASO 1.5] ConfigEverything agregado entre Paso 1 y Paso 2:
-#             - Chocolatey acaba de instalar Everything en Paso 1, momento correcto
-#             - Configura hide_empty_search_results=1 en Everything.ini
-#             - Clave confirmada en instalacion real (2026-03-16)
-#             - Pantalla en blanco al abrir Everything hasta que el usuario escriba
-#
-# CAMBIOS 2026-06-02 (manteniendo v3):
-#
-#  [PASO 4.5] EmptyStandbyList.exe: corregida URL de descarga:
-#             - RAMMap.zip no contiene EmptyStandbyList.exe (error anterior)
-#             - Ahora se descarga directo desde GitHub (stefanpejcic/EmptyStandbyList)
-#             - Idempotente: si ya existe lo saltea sin tocar nada
-#             - Requerido por AutoRAM-Monitor.ps1 para liberar Standby List
-#               en equipos con poca RAM (3GB o menos)
-#
-#  [PASO 4]  Deteccion de tipo de disco (SSD/HDD/Unspecified):
-#             - Label ahora refleja tipo real: "SSD WD 240gb" o "HDD WD 160gb"
-#             - Para SSD: capacidad nominal estandar (comportamiento anterior)
-#             - Para HDD y Unspecified: capacidad real redondeada sin ajuste nominal
-#             - Cubre discos IDE/SATA viejos que reportan MediaType Unspecified
-#
-# CAMBIOS 2026-03-19 (v3):
-#
-#  [PASO 4] Diccionario de marcas SSD (brandMap) reemplaza limpieza generica:
-#           - Marcas conocidas mapean a nombre limpio sin importar lo que traiga
-#             el FriendlyName del disco (que puede incluir la capacidad en distintos
-#             formatos: "240G", "240GB", "240Gb", etc.)
-#           - Resuelve redundancia "SSD HS--WAVE(S) 240G 240gb" -> "SSD Hicksemi 240gb"
-#           - Para marcas no mapeadas: fallback con limpieza generica mejorada
-#             que ahora cubre el patron \d+G\b (sin la B al final)
-#           - Facil de extender: agregar una linea al array $brandMap
-#
-#  [PASO 3.5] rustdesk.install excluido del choco upgrade all:
-#           - El servicio RustDesk corre en background durante el upgrade
-#           - El installer MSI puede fallar silenciosamente dejando el ejecutable
-#             sin icono/acceso directo aunque choco lo marque como instalado
-#           - Solucion: --except="rustdesk.install" en el upgrade masivo
-#
+#  - Reintentos progresivos en el Paso 2 (recuperacion de faltantes):
+#    normal -> --ignore-checksums -> --ignore-checksums --force
+#  - Deteccion de tipo de disco (SSD/HDD/Unspecified) con diccionario de
+#    marcas (brandMap) para nombres limpios sin redundancia de capacidad
+#  - EmptyStandbyList.exe: descarga idempotente desde GitHub, requerido por
+#    AutoRAM-Monitor en equipos con poca RAM
 # ==============================================================================
 
 # ==============================================================================
@@ -122,7 +96,6 @@ function Write-Log {
 function Get-ChocoInstalled {
     $raw = choco list --limit-output 2>$null | Where-Object { $_ -and $_.Trim() -ne "" }
     if (-not $raw) {
-        # Fallback choco v1
         $raw = choco list --local-only --limit-output 2>$null | Where-Object { $_ -and $_.Trim() -ne "" }
     }
     return $raw
@@ -130,6 +103,8 @@ function Get-ChocoInstalled {
 
 # Funcion: instalar un paquete con reintentos progresivos
 # Intento 1: normal | Intento 2: --ignore-checksums | Intento 3: --ignore-checksums --force
+# Usada solo por el Paso 2 (recuperacion individual de faltantes) - aca el
+# --force es de bajo riesgo porque afecta a un unico paquete, no a todo el config.
 function Install-ChocoConReintentos {
     param(
         [string]$PackageId,
@@ -143,8 +118,8 @@ function Install-ChocoConReintentos {
     )
 
     for ($i = 0; $i -lt $intentos.Count; $i++) {
-        $n    = $i + 1
-        $desc = $intentos[$i].Desc
+        $n     = $i + 1
+        $desc  = $intentos[$i].Desc
         $flags = $intentos[$i].Flags
 
         Write-Log "    [${n}/3] Instalando: $PackageId ($desc)" "INFO" "Yellow"
@@ -177,15 +152,8 @@ function Install-ChocoConReintentos {
 # INICIO
 # ==============================================================================
 
-# ==============================================================================
-# INTERRUPTORES - Modificar segun necesidad antes de ejecutar
-# ==============================================================================
-$LlamarScript5 = $false    # $true  = llama al Script 5 al finalizar (normal)
-                           # $false = termina sin llamar al Script 5 (debug)
-# ==============================================================================
-
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  4ExtraeNew-InstallAppsDesktop-Claude-v3.ps1  INICIO" "INFO" "Magenta"
+Write-Log "  4ExtraeNew-InstallAppsDesktop-Claude-v4.ps1  INICIO" "INFO" "Magenta"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Usuario   : $env:USERNAME en $env:COMPUTERNAME" "INFO" "Cyan"
 Write-Log "PS Version: $($PSVersionTable.PSVersion)" "INFO" "Cyan"
@@ -216,13 +184,14 @@ $automaticoPath = "C:\Users\Public\Documents\Automatico"
 Set-Location $automaticoPath -ErrorAction SilentlyContinue
 
 # ==============================================================================
-# PASO 1 - INSTALAR DESDE ARCHIVO MAESTRO
-# Reintentos progresivos: normal -> --ignore-checksums -> --ignore-checksums --force
+# PASO 1 - INSTALAR DESDE ARCHIVO MAESTRO (unico config, sin versiones fijas)
+# 2 intentos para todo el config: normal -> --ignore-checksums.
+# El Paso 2 hace de control: compara maestro vs instalado y resuelve
+# individualmente lo que estos 2 intentos no hayan podido resolver.
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "--- PASO 1: INSTALAR DESDE ARCHIVO MAESTRO ---" "INFO" "Yellow"
 
-# CAMBIO v2: nombre con Desktop (D minuscula) - consistente con el pendrive
 $masterConfig     = Join-Path $automaticoPath "InstallAppsDesktop-Automatico.config"
 $paso1OK          = $false
 $expectedPackages = @()
@@ -233,7 +202,6 @@ if (-not (Test-Path $masterConfig)) {
 } else {
     Write-Log "  [OK] Archivo maestro encontrado: $masterConfig" "INFO" "Green"
 
-    # Parsear lista esperada del XML maestro
     try {
         [xml]$masterXml   = Get-Content $masterConfig -Encoding UTF8
         $expectedPackages = $masterXml.packages.package | ForEach-Object { $_.id }
@@ -243,7 +211,7 @@ if (-not (Test-Path $masterConfig)) {
     }
 
     # Intento 1: instalacion normal del config completo
-    Write-Log "  [1/3] choco install config (normal)..." "INFO" "Yellow"
+    Write-Log "  [1/2] choco install config (normal)..." "INFO" "Yellow"
     try {
         choco install $masterConfig --limit-output --no-progress -y
         if ($LASTEXITCODE -eq 0) {
@@ -258,38 +226,20 @@ if (-not (Test-Path $masterConfig)) {
         Start-Sleep -Seconds 5
     }
 
-    # Intento 2: con --ignore-checksums
+    # Intento 2: con --ignore-checksums (resuelve la gran mayoria de los casos)
     if (-not $paso1OK) {
-        Write-Log "  [2/3] choco install config (--ignore-checksums)..." "INFO" "Yellow"
+        Write-Log "  [2/2] choco install config (--ignore-checksums)..." "INFO" "Yellow"
         try {
             choco install $masterConfig --ignore-checksums --limit-output --no-progress -y
             if ($LASTEXITCODE -eq 0) {
                 Write-Log "  [OK] Instalacion completada (intento 2, --ignore-checksums)." "INFO" "Green"
                 $paso1OK = $true
             } else {
-                Write-Log "  [WARN] Intento 2 fallo (ExitCode: $LASTEXITCODE). Reintentando con --force..." "WARN" "Yellow"
-                Start-Sleep -Seconds 5
-            }
-        } catch {
-            Write-Log "  [WARN] Intento 2 - excepcion: $_. Reintentando..." "WARN" "Yellow"
-            Start-Sleep -Seconds 5
-        }
-    }
-
-    # Intento 3: con --ignore-checksums --force
-    if (-not $paso1OK) {
-        Write-Log "  [3/3] choco install config (--ignore-checksums --force)..." "INFO" "Yellow"
-        try {
-            choco install $masterConfig --ignore-checksums --force --limit-output --no-progress -y
-            if ($LASTEXITCODE -eq 0) {
-                Write-Log "  [OK] Instalacion completada (intento 3, --ignore-checksums --force)." "INFO" "Green"
-                $paso1OK = $true
-            } else {
-                Write-Log "  [ERROR] Los 3 intentos fallaron para la instalacion del config (ExitCode: $LASTEXITCODE)" "ERROR" "Red"
+                Write-Log "  [WARN] Los 2 intentos del config completo fallaron (ExitCode: $LASTEXITCODE)." "WARN" "Yellow"
                 Write-Log "  El Paso 2 intentara recuperar los paquetes faltantes individualmente." "WARN" "Yellow"
             }
         } catch {
-            Write-Log "  [ERROR] Intento 3 - excepcion: $_" "ERROR" "Red"
+            Write-Log "  [WARN] Intento 2 - excepcion: $_" "WARN" "Yellow"
             Write-Log "  El Paso 2 intentara recuperar los paquetes faltantes individualmente." "WARN" "Yellow"
         }
     }
@@ -300,14 +250,13 @@ Write-Log "--- [PASO 1] Completado ---" "INFO" "Yellow"
 # ==============================================================================
 # PASO 1.5 - CONFIGURAR EVERYTHING
 # Se ejecuta aqui porque Chocolatey acaba de instalarlo en el Paso 1.
-# Configura pantalla en blanco hasta que el usuario escriba en la barra.
-# Instala el servicio Everything para indexar NTFS sin UAC (compatible con
-# la desindexacion de disco C: que se aplica en las instalaciones).
+# BUG CORREGIDO: la clave "hide_empty_search_results" no existe en Everything;
+# la clave real es "hide_results_when_search_is_empty". Se agregan ademas
+# las mismas configuraciones extra de ConfigEverything.ps1.
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "--- PASO 1.5: CONFIGURAR EVERYTHING ---" "INFO" "Yellow"
 
-# Everything debe estar cerrado para poder escribir el ini
 Stop-Process -Name "Everything" -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 
@@ -318,19 +267,26 @@ if (-not (Test-Path $everythingIni)) {
 
 if (Test-Path $everythingIni) {
     try {
-        $key   = "hide_empty_search_results"
-        $value = "1"
+        $settings = @{
+            "hide_results_when_search_is_empty" = 1   # pantalla en blanco hasta que el usuario escriba
+            "exclude_system_files"              = 1   # ocultar archivos de sistema
+            "exclude_hidden_files"               = 1   # ocultar carpetas ocultas
+            "show_status_bar"                    = 0   # vista mas limpia sin barra de estado
+            "match_path"                         = 0
+        }
 
         $iniContent = Get-Content $everythingIni
-
-        if ($iniContent -match "^$key=") {
-            $iniContent = $iniContent | ForEach-Object {
-                if ($_ -match "^$key=") { "$key=$value" } else { $_ }
+        foreach ($key in $settings.Keys) {
+            $value = $settings[$key]
+            if ($iniContent -match "^$key=") {
+                $iniContent = $iniContent | ForEach-Object {
+                    if ($_ -match "^$key=") { "$key=$value" } else { $_ }
+                }
+                Write-Log "  [OK] Clave '$key' actualizada a $value en Everything.ini." "INFO" "Green"
+            } else {
+                $iniContent += "$key=$value"
+                Write-Log "  [OK] Clave '$key' agregada con valor $value en Everything.ini." "INFO" "Green"
             }
-            Write-Log "  [OK] Clave '$key' actualizada a $value en Everything.ini." "INFO" "Green"
-        } else {
-            $iniContent += "$key=$value"
-            Write-Log "  [OK] Clave '$key' agregada con valor $value en Everything.ini." "INFO" "Green"
         }
 
         $iniContent | Set-Content $everythingIni -Encoding utf8NoBOM
@@ -343,7 +299,6 @@ if (Test-Path $everythingIni) {
 }
 
 # Instalar servicio Everything para indexar NTFS sin requerir UAC.
-# Necesario cuando la indexacion del disco C: esta desactivada (Chris Titus).
 $everythingExe = "C:\Program Files\Everything\Everything.exe"
 if (Test-Path $everythingExe) {
     try {
@@ -353,6 +308,14 @@ if (Test-Path $everythingExe) {
     } catch {
         Write-Log "  [WARN] No se pudo instalar el servicio Everything: $_" "WARN" "Yellow"
     }
+
+    # Reiniciar Everything para que tome la config nueva (ConfigEverything.ps1 lo hacia asi)
+    try {
+        Start-Process $everythingExe
+        Write-Log "  [OK] Everything reiniciado con la configuracion nueva." "INFO" "Green"
+    } catch {
+        Write-Log "  [WARN] No se pudo reiniciar Everything: $_" "WARN" "Yellow"
+    }
 } else {
     Write-Log "  [WARN] Everything.exe no encontrado en ruta esperada." "WARN" "Yellow"
 }
@@ -361,6 +324,8 @@ Write-Log "--- [PASO 1.5] Completado ---" "INFO" "Yellow"
 
 # ==============================================================================
 # PASO 2 - VERIFICAR FALTANTES Y REINSTALAR (uno por uno con reintentos)
+# Este es el "control" que compara el config maestro contra lo efectivamente
+# instalado, y resuelve individualmente lo que el Paso 1 no haya logrado.
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "--- PASO 2: VERIFICAR PAQUETES FALTANTES ---" "INFO" "Yellow"
@@ -377,8 +342,8 @@ if ($expectedPackages.Count -eq 0) {
         $missing | ForEach-Object { Write-Log "    - $_" "WARN" "Yellow" }
         Write-Log "  Reinstalando individualmente con reintentos progresivos..." "INFO" "Yellow"
 
-        $recuperados  = 0
-        $aunFallan    = @()
+        $recuperados = 0
+        $aunFallan   = @()
 
         foreach ($pkg in $missing) {
             $ok = Install-ChocoConReintentos -PackageId $pkg -EsperaSegundos 5
@@ -401,67 +366,11 @@ if ($expectedPackages.Count -eq 0) {
 Write-Log "--- [PASO 2] Completado ---" "INFO" "Yellow"
 
 # ==============================================================================
-# PASO 3 - REVISAR SOBRANTES Y LIMPIAR (interactivo)
+# PASO 3 - RENOMBRAR VOLUMEN C: CON MARCA Y CAPACIDAD DEL SSD
+# (era Paso 4 en v3 - renumerado al eliminar los antiguos Paso 3 y 3.5)
 # ==============================================================================
 Write-Log "" "INFO" "White"
-Write-Log "--- PASO 3: REVISAR PAQUETES SOBRANTES ---" "INFO" "Yellow"
-
-if ($expectedPackages.Count -eq 0) {
-    Write-Log "  [SKIP] Sin lista de referencia. Saltando limpieza." "WARN" "Yellow"
-} else {
-    $installedRaw      = Get-ChocoInstalled
-    $installedPackages = $installedRaw | ForEach-Object { ($_ -split '\|')[0].Trim() }
-    $extras            = $installedPackages | Where-Object { $_ -notin $expectedPackages }
-
-    if ($extras.Count -gt 0) {
-        Write-Log "  Paquetes extras/dependencias detectados: $($extras.Count)" "INFO" "Cyan"
-        $extras | ForEach-Object { Write-Log "    - $_" "INFO" "Cyan" }
-
-        Write-Log "  Revisando uno por uno (Enter = mantener)..." "INFO" "Yellow"
-        foreach ($pkg in $extras) {
-            $resp = Read-Host "  Desinstalar '$pkg'? (s/n)"
-            if ($resp -eq 's' -or $resp -eq 'S') {
-                try {
-                    choco uninstall $pkg -y
-                    Write-Log "    [OK] Desinstalado: $pkg" "INFO" "Yellow"
-                } catch {
-                    Write-Log "    [ERROR] No se pudo desinstalar: $pkg - $_" "ERROR" "Red"
-                }
-            } else {
-                Write-Log "    [OK] Mantenido: $pkg" "INFO" "Gray"
-            }
-        }
-        Write-Log "  [OK] Proceso de limpieza completado." "INFO" "Green"
-    } else {
-        Write-Log "  [OK] No hay paquetes extras para revisar." "INFO" "Green"
-    }
-}
-
-Write-Log "--- [PASO 3] Completado ---" "INFO" "Yellow"
-
-# ==============================================================================
-# PASO 3.5 - ACTUALIZAR TODOS LOS PAQUETES
-# ==============================================================================
-Write-Log "" "INFO" "White"
-Write-Log "--- PASO 3.5: ACTUALIZAR TODOS LOS PAQUETES ---" "INFO" "Yellow"
-try {
-    # rustdesk.install excluido del upgrade masivo: su servicio corre en background
-    # y puede causar que el installer MSI falle silenciosamente durante el upgrade,
-    # dejando el ejecutable sin icono/acceso directo aunque choco lo marque como OK.
-    choco upgrade all --except="rustdesk.install" --limit-output --no-progress -y
-    Write-Log "  [OK] Actualizacion completada (rustdesk.install excluido del upgrade masivo)." "INFO" "Green"
-    Write-Log "  [i] RustDesk se actualiza manualmente o via reinstalacion en Paso 2." "INFO" "Gray"
-} catch {
-    Write-Log "  [WARN] Error durante actualizacion: $_" "WARN" "Yellow"
-}
-Write-Log "--- [PASO 3.5] Completado ---" "INFO" "Yellow"
-
-# ==============================================================================
-# PASO 4 - RENOMBRAR VOLUMEN C: CON MARCA Y CAPACIDAD DEL SSD
-# (era Paso 5 en v1 - renumerado al eliminar el antiguo Paso 4)
-# ==============================================================================
-Write-Log "" "INFO" "White"
-Write-Log "--- PASO 4: RENOMBRAR VOLUMEN C: (SSD) ---" "INFO" "Yellow"
+Write-Log "--- PASO 3: RENOMBRAR VOLUMEN C: (SSD) ---" "INFO" "Yellow"
 
 try {
     $partition = Get-Partition -DriveLetter 'C' -ErrorAction Stop
@@ -470,8 +379,6 @@ try {
     if ($null -eq $disk) {
         Write-Log "  [WARN] No se pudo detectar el disco fisico de C:. Saltando renombrado." "WARN" "Yellow"
     } else {
-        # Diccionario de marcas conocidas -> nombre limpio (sin capacidad del modelo)
-        # Evita redundancia cuando el FriendlyName incluye la capacidad (ej: "HS--WAVE(S) 240G")
         $brandMap = @(
             @{ Pattern = 'Hicksemi|HS-SSD-WAVE|HS--WAVE|HSWAVE|HS-WAVE'; Name = 'Hicksemi'  }
             @{ Pattern = 'Kingston|KINGSTON|SA400';           Name = 'Kingston'  }
@@ -500,23 +407,17 @@ try {
         }
 
         if ($matchedName) {
-            # Marca conocida: usar nombre limpio del diccionario
             $brand = $matchedName
             Write-Log "  Marca identificada: '$rawBrand' -> '$brand'" "INFO" "Cyan"
         } else {
-            # Marca desconocida: limpieza generica
-            # -replace '\d+\s*G\b' cubre "240G", "480G", etc. (sin la B)
-            # -replace '\d+GB'     cubre "240GB", "480GB", etc.
             $brand = ($rawBrand -replace '\d+\s*G\b', '' -replace '\d+GB', '' -replace 'SSD', '' -replace '\s+', ' ').Trim()
             Write-Log "  Marca no mapeada, limpieza generica: '$rawBrand' -> '$brand'" "WARN" "Yellow"
         }
 
-        # Detectar tipo de disco
-        $mediaType = $disk.MediaType  # "SSD", "HDD", "Unspecified" o $null
+        $mediaType = $disk.MediaType
         $rawGB     = $disk.Size / 1GB
 
         if ($mediaType -eq "SSD") {
-            # SSD: capacidad nominal estandar (comportamiento original)
             $diskPrefix = "SSD"
             $capacityGB = switch ($rawGB) {
                 { $_ -le 135  } { 128;  break }
@@ -528,7 +429,6 @@ try {
             }
             Write-Log "  Tipo detectado: SSD" "INFO" "Cyan"
         } else {
-            # HDD o Unspecified (discos IDE/SATA viejos): capacidad real redondeada
             $diskPrefix = "HDD"
             $capacityGB = [math]::Round($rawGB)
             Write-Log "  Tipo detectado: $($mediaType ? $mediaType : 'Unspecified') -> tratado como HDD" "WARN" "Yellow"
@@ -536,7 +436,6 @@ try {
 
         $newLabel = "$diskPrefix $brand ${capacityGB}gb"
 
-        # NTFS admite hasta 32 chars en label
         if ($newLabel.Length -gt 32) {
             Write-Log "  [WARN] Nombre demasiado largo, truncando a 32 chars: $newLabel" "WARN" "Yellow"
             $newLabel = $newLabel.Substring(0, 32)
@@ -550,13 +449,14 @@ try {
     Write-Log "  Continuando sin renombrar." "INFO" "Gray"
 }
 
-Write-Log "--- [PASO 4] Completado ---" "INFO" "Yellow"
+Write-Log "--- [PASO 3] Completado ---" "INFO" "Yellow"
 
 # ==============================================================================
-# PASO 4.5 - DESCARGAR EmptyStandbyList.exe (requerido por AutoRAM-Monitor)
+# PASO 3.5 - DESCARGAR EmptyStandbyList.exe (requerido por AutoRAM-Monitor)
+# (era Paso 4.5 en v3)
 # ==============================================================================
 Write-Log "" "INFO" "White"
-Write-Log "--- PASO 4.5: EmptyStandbyList.exe para AutoRAM ---" "INFO" "Yellow"
+Write-Log "--- PASO 3.5: EmptyStandbyList.exe para AutoRAM ---" "INFO" "Yellow"
 
 $rutaTools = Join-Path $automaticoPath "Tools"
 $destino   = Join-Path $rutaTools "EmptyStandbyList.exe"
@@ -576,30 +476,17 @@ if (-not (Test-Path $destino)) {
     Write-Log "  [i] EmptyStandbyList.exe ya presente en Tools\ - sin cambios." "INFO" "Gray"
 }
 
-Write-Log "--- [PASO 4.5] Completado ---" "INFO" "Yellow"
+Write-Log "--- [PASO 3.5] Completado ---" "INFO" "Yellow"
 
 # ==============================================================================
 # FIN DEL SCRIPT
+# S5 queda descartado (ver Script 1) - no hay llamado a ningun script mas.
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  4ExtraeNew-InstallAppsDesktop-Claude-v3.ps1  FIN" "INFO" "Green"
+Write-Log "  4ExtraeNew-InstallAppsDesktop-Claude-v4.ps1  FIN" "INFO" "Green"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Log       : $global:LogFile" "INFO" "Cyan"
 Write-Log "" "INFO" "White"
-Write-Log "SIGUIENTE PASO: Script 5 - 5WindowsUpdateClaude.ps1" "INFO" "White"
-Write-Log "Iniciando en 6 segundos..." "INFO" "Yellow"
-
-Start-Sleep -Seconds 6
-
-# Llamado al Script 5
-$script5 = Join-Path $automaticoPath "5WindowsUpdateClaude.ps1"
-if (-not $LlamarScript5) {
-    Write-Log "  [i] Llamado al Script 5 desactivado (LlamarScript5 = false)" "INFO" "Gray"
-} elseif (Test-Path $script5) {
-    Write-Log "Ejecutando Script 5: $script5" "INFO" "Cyan"
-    & $script5
-} else {
-    Write-Log "  [WARN] Script 5 no encontrado en: $script5" "WARN" "Yellow"
-    Write-Log "  Ejecutalo manualmente cuando estes listo." "INFO" "White"
-}
+Write-Log "DESPLIEGUE COMPLETO. Sin mas scripts en la cadena." "INFO" "Green"
+Write-Log "" "INFO" "White"
