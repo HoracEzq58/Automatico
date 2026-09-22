@@ -76,7 +76,14 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/HoracEzq58/Automatico/
 # para eliminar por remoto en pc de clientes !
 Remove-Item "C:\Users\Public\Documents\Automatico\config.json" -Force
 
+# Eliminar o borrar del repo un archivo:
 
+cd "D:\Biblioteca-Horace\Documentos-Horacio-2\DocuHoraEzq\Automatico"
+git rm --cached Vigilante.ps1
+git commit -m "Dejar de trackear Vigilante.ps1 (ya estaba en .gitignore)"
+git push origin HEAD:main
+
+****************************************************************************************
 New-Item -ItemType Directory -Force -Path "C:\Temp_Work" -ErrorAction SilentlyContinue;
 curl -L "https://github.com/HoracEzq58/Automatico/archive/refs/heads/main.zip" -o "C:\Temp_Work\Automatico.zip";
 Expand-Archive "C:\Temp_Work\Automatico.zip" -DestinationPath "C:\Temp_Work" -Force;
