@@ -1033,6 +1033,8 @@ try {
         & nssm set     $nombreServicio AppStderr "C:\Users\Public\Documents\AutoTemp\AutoRAM-nssm.log"
         & nssm set     $nombreServicio AppRotateFiles 1
         & nssm set     $nombreServicio AppRotateBytes 1048576
+		& nssm set     $nombreServicio AppExit Default Exit
+		& nssm set     $nombreServicio AppThrottle 1500
         & nssm start   $nombreServicio
 
         Start-Sleep -Seconds 3
