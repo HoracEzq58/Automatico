@@ -629,6 +629,7 @@ function Iniciar-Limpieza {
         @{Tipo="Sistema"; Nombre="prefetch";             Accion={ Limpiar-Prefetch "C:\Windows\Prefetch" "Prefetch (archivos .pf > 30 dias)" }},
         # --- TAREAS PROGRAMADAS NO DESEADAS ---
         @{Tipo="Tareas"; Nombre="edge_tasks";    Accion={ Limpiar-TareasProgramadas "C:\Windows\System32\Tasks" "MicrosoftEdgeUpdateTask*" "Tareas de Edge Update" }},
+		@{Tipo="Tareas"; Nombre="brave_tasks"; Accion={ Limpiar-TareasProgramadas "C:\Windows\System32\Tasks" "BraveSoftwareUpdateTaskUser*" "Tareas de Brave Update" }},
         @{Tipo="Tareas"; Nombre="defrag_tasks";  Accion={ Limpiar-TareasProgramadas "C:\Windows\System32\Tasks\Microsoft\Windows\Defrag" "*" "Tareas de Defrag" }},
         @{Tipo="Tareas"; Nombre="invasivas_blacklist"; Accion={ Eliminar-TareasInvasivas }},
         # --- SERVICIOS EDGE (OPCIONALES) ---
