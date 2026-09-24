@@ -1,8 +1,5 @@
 # Nombre Archivo: "LimpiaManyCam.ps1" 23/09/2026 Modo AI
 # Set-ExecutionPolicy Bypass -Scope Process -Force; & "C:\Users\Public\Documents\Automatico\LimpiaManyCam.ps1"
-# Nombre Archivo: "LimpiaResiduosCam.ps1" 23/09/2026 Modo AI
-# Set-ExecutionPolicy Bypass -Scope Process -Force; & "C:\Users\pomelo\Downloads\LimpiaResiduosCam.ps1"
-
 # 1. Frenar y borrar servicios rebeldes (por si quedó alguno de ManyCam o WebCamoid en segundo plano)
 $Servicios = @("ManyCam Service", "WebCamoid Service", "WebCamoid")
 foreach ($Servicio in $Servicios) {
