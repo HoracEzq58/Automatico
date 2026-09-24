@@ -1,5 +1,5 @@
 # Nombre Archivo: "LimpiaManyCam.ps1" 23/09/2026 Modo AI
-# Set-ExecutionPolicy Bypass -Scope Process -Force; & "C:\Users\pomelo\Downloads\LimpiaManyCam.ps1"
+# Set-ExecutionPolicy Bypass -Scope Process -Force; & "C:\Users\Public\Documents\Automatico\LimpiaManyCam.ps1"
 # Nombre Archivo: "LimpiaResiduosCam.ps1" 23/09/2026 Modo AI
 # Set-ExecutionPolicy Bypass -Scope Process -Force; & "C:\Users\pomelo\Downloads\LimpiaResiduosCam.ps1"
 
