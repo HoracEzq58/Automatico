@@ -1,8 +1,14 @@
 # Nombre Archivo: "LimpiaManyCam.ps1" 23/09/2026 Modo AI
 # Set-ExecutionPolicy Bypass -Scope Process -Force; & "C:\Users\pomelo\Downloads\LimpiaManyCam.ps1"
-# 1. Frenar y borrar servicios rebeldes (frenamos ManyCam por si las dudas)
-Stop-Service -Name "ManyCam Service" -Force -ErrorAction SilentlyContinue
-Remove-Service -Name "ManyCam Service" -ErrorAction SilentlyContinue
+# Nombre Archivo: "LimpiaResiduosCam.ps1" 23/09/2026 Modo AI
+# Set-ExecutionPolicy Bypass -Scope Process -Force; & "C:\Users\pomelo\Downloads\LimpiaResiduosCam.ps1"
+
+# 1. Frenar y borrar servicios rebeldes (por si quedó alguno de ManyCam o WebCamoid en segundo plano)
+$Servicios = @("ManyCam Service", "WebCamoid Service", "WebCamoid")
+foreach ($Servicio in $Servicios) {
+    Stop-Service -Name $Servicio -Force -ErrorAction SilentlyContinue
+    Remove-Service -Name $Servicio -ErrorAction SilentlyContinue
+}
 
 # 2. Rutas del sistema donde Chocolatey y Windows metieron las garras
 $RutasA_Limpiar = @(
@@ -16,8 +22,8 @@ $RutasA_Limpiar = @(
     "C:\Windows\SystemTemp\ChocolateyScratch"
 )
 
-# 3. Lista de palabras clave a eliminar de raíz (ManyCam y AutoHotkey)
-$Objetivos = @("*ManyCam*", "*AutoHotkey*")
+# 3. Lista de palabras clave a eliminar de raíz (Sumamos WebCamoid)
+$Objetivos = @("*ManyCam*", "*AutoHotkey*", "*WebCamoid*")
 
 # 4. El súper barrido masivo de carpetas y archivos
 foreach ($Ruta in $RutasA_Limpiar) {
@@ -33,4 +39,4 @@ foreach ($Ruta in $RutasA_Limpiar) {
     }
 }
 
-Write-Host "`n¡Limpieza completa de ManyCam y AutoHotkey finalizada!" -ForegroundColor Green
+Write-Host "`n¡Limpieza completa de ManyCam, AutoHotkey y WebCamoid finalizada!" -ForegroundColor Green
