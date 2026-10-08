@@ -1,9 +1,11 @@
 # ==============================================================================
-# Nombre Script: "1Fi-2609-AutomaticoClaude.ps1" version 6 (unificada) 12/09/2026
+# Nombre Script: "1Fi-2603-AutomaticoClaude.ps1" version 6 (unificada) 12/09/2026
 # Basado en: "1Fi-2601-AutomaticoClaude.ps1"
 # Reescrito por: Claude (Anthropic) - 2026-09-12
 # Requiere: PowerShell 5 (compatible con W10 IoT LTSC recien instalado)
 # Ejecutar como: Administrador
+# SET-EXECUTIONPOLICY -EXECUTIONPOLICY UNRESTRICTED -SCOPE LocalMachine
+# iwr -useb https://christitus.com/win | iex
 # ==============================================================================
 #
 # CAMBIOS vs version anterior (1Fi-2601):
@@ -14,8 +16,6 @@
 #             cuenta "Pomelo") y lo guarda en un archivo compartido para que
 #             el S2 lo lea sin volver a preguntar. Motivo: dejar el despliegue
 #             corriendo sin supervision (S1 arranca, S1-S4 terminan solos).
-#
-#  [REDISENO] Repo de imagenes: Fi-2603 -> Fi-2609 (actualizado 2026-09).
 #
 #  [REDISENO] SECCION 04 (instalacion de apps con grupos de prioridad) y
 #             SECCION 05 (copiar spanish.xml de Notepad++) se ELIMINAN de
@@ -43,8 +43,8 @@
 # ==============================================================================
 
 $global:LogPath  = "C:\Users\Public\Documents\AutoTemp"
-$global:LogFile  = Join-Path $global:LogPath "Fi-2609_Install_$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss').log"
-$global:ErrorLog = Join-Path $global:LogPath "Fi-2609_Errors_$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss').log"
+$global:LogFile  = Join-Path $global:LogPath "Fi-2603_Install_$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss').log"
+$global:ErrorLog = Join-Path $global:LogPath "Fi-2603_Errors_$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss').log"
 
 # Archivo compartido de respuestas: lo escribe S1, lo leen S2 (y en el futuro
 # cualquier otro script de la cadena que necesite algo pedido al operador).
@@ -81,7 +81,7 @@ $LlamarScript2 = $true    # $true  = llama al Script 2 al finalizar (normal)
 # ==============================================================================
 
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  1Fi-2609_AutomaticoClaude.ps1  INICIO" "INFO" "Magenta"
+Write-Log "  1Fi-2603-AutomaticoClaude.ps1  INICIO" "INFO" "Magenta"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Usuario  : $env:USERNAME en $env:COMPUTERNAME" "INFO" "Cyan"
 Write-Log "PS Version: $($PSVersionTable.PSVersion)" "INFO" "Cyan"
@@ -132,7 +132,7 @@ Write-Log "--- [SECCION 00] Completada. De aca en mas, el despliegue no pregunta
 # Sin Git, sin pendrive. Compatible PS5.
 #
 # REPO 1: HoracEzq58/Automatico -> C:\Users\Public\Documents\Automatico\
-# REPO 2: HoracEzq58/Fi-2609    -> C:\Users\Public\Pictures\Fi-2609\
+# REPO 2: HoracEzq58/Fi-2603    -> C:\Users\Public\Pictures\Fi-2603\
 #
 # NOTA: GitHub genera el ZIP con una carpeta raiz llamada "NombreRepo-main\"
 #       Su contenido ES el destino final, no una subcarpeta dentro de el.
@@ -214,11 +214,11 @@ if (-not $ok1) {
 }
 
 Write-Log "" "INFO" "White"
-Write-Log "  [2/2] Repo Fi-2609 (imagenes cliente)" "INFO" "Magenta"
-$ok2 = Invoke-DescargarRepo -NombreRepo "Fi-2609" -DestPadre $DestImagenes
+Write-Log "  [2/2] Repo Fi-2603 (imagenes cliente)" "INFO" "Magenta"
+$ok2 = Invoke-DescargarRepo -NombreRepo "Fi-2603" -DestPadre $DestImagenes
 
 Write-Log "" "INFO" "White"
-Write-Log "  Resultado -> Automatico: $(if($ok1){'OK'}else{'FALLO'}) | Fi-2609: $(if($ok2){'OK'}else{'FALLO'})" "INFO" "Cyan"
+Write-Log "  Resultado -> Automatico: $(if($ok1){'OK'}else{'FALLO'}) | Fi-2603: $(if($ok2){'OK'}else{'FALLO'})" "INFO" "Cyan"
 Write-Log "--- [SECCION 01] Completada ---" "INFO" "Yellow"
 
 # ==============================================================================
@@ -281,7 +281,7 @@ Write-Log "--- [SECCION 03] Completada ---" "INFO" "Yellow"
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  1Fi-2609_AutomaticoClaude.ps1  FIN" "INFO" "Green"
+Write-Log "  1Fi-2603_AutomaticoClaude.ps1  FIN" "INFO" "Green"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Log guardado en : $global:LogFile" "INFO" "Cyan"
 Write-Log "Errores en      : $global:ErrorLog" "INFO" "Cyan"
