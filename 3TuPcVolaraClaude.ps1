@@ -1063,7 +1063,7 @@ Write-Log "" "INFO" "White"
 Write-Log "--- SECCION 20: LLAMADO AL SCRIPT 4 ---" "INFO" "Yellow"
 
 $extDir    = "C:\Users\Public\Documents\Automatico\"
-$extScript = "4ExtraeNew-InstallAppsDesktop-Claude.ps1"
+$extScript = "4InstallAppsDesktop-Claude.ps1"
 $extFull   = Join-Path $extDir $extScript
 
 if (-not $LlamarScript4) {
