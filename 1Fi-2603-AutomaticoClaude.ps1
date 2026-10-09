@@ -24,6 +24,8 @@
 #             control de faltantes). El spanish.xml no hace falta copiarlo:
 #             el paquete de Notepad++ ya trae esa localizacion incluida de
 #             fabrica en su carpeta "localization".
+#			  Seccion 05 (spanish de notepad++ se vuelve a poner 09/10/2026,
+#			  Notepad no la instala ...
 #
 #  [REDISENO] SECCION 03: en vez de dejar la puerta abierta a instalar apps
 #             con Chocolatey aca, se limita a instalar SOLO powershell-core
@@ -275,6 +277,34 @@ try {
     Write-Log "  Sin pwsh7 la cadena no puede continuar. Revisar antes de seguir." "WARN" "Yellow"
 }
 Write-Log "--- [SECCION 03] Completada ---" "INFO" "Yellow"
+# ==============================================================================
+# SECCION 04 (Ex 05) - COPIAR ARCHIVO ESPAÑOL PARA NOTEPAD++
+# ==============================================================================
+Write-Log "" "INFO" "White"
+Write-Log "--- SECCION 05: ARCHIVO ESPAÑOL NOTEPAD++ ---" "INFO" "Yellow"
+
+$nppSpanishOrigen = "C:\Users\Public\Documents\Automatico\Tools\spanish.xml"
+$nppDir           = "C:\Program Files\Notepad++"
+$nppLocalization  = "$nppDir\localization"
+
+if (-not (Test-Path $nppSpanishOrigen)) {
+    Write-Log "  [WARN] spanish.xml no encontrado en: $nppSpanishOrigen" "WARN" "Yellow"
+} elseif (-not (Test-Path $nppDir)) {
+    Write-Log "  [WARN] Notepad++ no esta instalado. Saltando copia de spanish.xml." "WARN" "Yellow"
+} else {
+    try {
+        if (-not (Test-Path $nppLocalization)) {
+            New-Item -ItemType Directory -Path $nppLocalization -Force | Out-Null
+        }
+        Copy-Item $nppSpanishOrigen -Destination $nppLocalization -Force
+        Write-Log "  [OK] spanish.xml copiado a: $nppLocalization" "INFO" "Green"
+    } catch {
+        Write-Log "  [ERROR] No se pudo copiar spanish.xml: $_" "ERROR" "Red"
+    }
+}
+
+Write-Log "--- [SECCION 05] Completada ---" "INFO" "Yellow"
+
 
 # ==============================================================================
 # FIN DEL SCRIPT
