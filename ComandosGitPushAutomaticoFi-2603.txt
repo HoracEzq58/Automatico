@@ -83,6 +83,16 @@ git rm --cached 'Vigilante.ps1'
 git commit -m "Dejar de trackear Vigilante.ps1 (ya estaba en .gitignore)"
 git push origin HEAD:main
 
+cd "D:\Biblioteca-Horace\Documentos-Horacio-2\DocuHoraEzq\Automatico"
+
+git rm --cached 'Tu-pc-va-a-volar/~$ PC va a VOLAR W10.docx'
+git rm --cached 'Tu-pc-va-a-volar/~$NUX Comandos pacman para Linux.docx'
+git rm --cached 'Tu-pc-va-a-volar/~$TIMIZA TODO.docx'
+git rm --cached 'Tu-pc-va-a-volar/~$ntexto AI.docx'
+git rm --cached 'Tu-pc-va-a-volar/~WRL0003.tmp'
+
+git status
+
 ****************************************************************************************
 New-Item -ItemType Directory -Force -Path "C:\Temp_Work" -ErrorAction SilentlyContinue;
 curl -L "https://github.com/HoracEzq58/Automatico/archive/refs/heads/main.zip" -o "C:\Temp_Work\Automatico.zip";
