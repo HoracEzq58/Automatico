@@ -1,33 +1,46 @@
 # ==============================================================================
-# Nombre Script: "2RenameLaptop-Desktop-Claude.ps1" version 6 (unificada) 12/09/2026
-# Basado en: "2RenameLaptop-Desktop-Claude.ps1" version 4
-# Reescrito por: Claude (Anthropic) - 2026-09-12
+# Nombre Script: "2RenameLaptop-Desktop-Claude.ps1" version 7  12/10/2026
+# Basado en: version 6 (unificada) 12/09/2026
+# Reescrito por: Claude (Anthropic) - 2026-10-12
 # Requiere: PowerShell 7 | Administrador | W10/W11 IoT LTSC
 # ==============================================================================
 #
-# CAMBIOS v5 (2026-09-12):
+# CAMBIOS v7 (2026-10-12):
+#
+#  [BUG CORREGIDO] Get-CleanComputerPrefix borraba las letras con tilde en vez
+#             de convertirlas: "Nestor" con tilde daba NSTORTA en lugar de
+#             NESTORT. Ahora se normaliza (FormD) y se quitan las marcas
+#             diacriticas ANTES de filtrar (a, e, i, o, u con tilde, enie,
+#             dieresis). Ademas se recortan guiones de los extremos.
+#
+#  [ROBUSTEZ] Si el nombre no deja ningun caracter valido para hostname, el
+#             prefijo cae a "PC" (antes el hostname quedaba "DESKTOP-", que
+#             termina en guion y es invalido).
+#
+#  [LOG] Sec2: con instalacion por Rufus la cuenta "Pomelo" ya no existe (la
+#             cuenta real ya tiene el nombre del cliente, y el S1 lo reutiliza
+#             sin preguntar). Antes daba un WARN en cada despliegue; ahora es
+#             un mensaje informativo.
+#
+#  [COSMETICO] Version unificada en encabezado, comentarios y logs de inicio/fin.
+#
+# CAMBIOS v5/v6 (se mantienen):
 #
 #  [REDISENO] Sec1 Office: instalacion simplificada a CMD + setup.exe, el
 #             chequeo de "ya instalado" bajo de ~25 lineas a 2.
 #
-#  [REDISENO] Sec2 rename de usuario: la cuenta "Pomelo" NUNCA se renombra
-#             (no hay Rename-LocalUser). Lo unico que cambia es el FullName
-#             (lo que Windows Hello muestra en pantalla de bienvenida, igual
-#             que "Cambiar nombre" en netplwiz). El nombre ya no se pregunta
-#             aca: se lee de RespuestasDespliegue.json, escrito por el S1 en
-#             su Seccion 00 (con fallback a Read-Host si el archivo no esta,
-#             para poder seguir corriendo este script de forma standalone).
+#  [REDISENO] Sec2: la cuenta nunca se renombra (no hay Rename-LocalUser). Lo
+#             unico que cambia es el FullName (lo que Windows Hello muestra en
+#             pantalla de bienvenida). El nombre no se pregunta aca: se lee de
+#             RespuestasDespliegue.json, escrito por el S1 en su Seccion 00
+#             (con fallback a Read-Host si el archivo no esta, para poder
+#             correr este script de forma standalone).
 #
-#  [REDISENO] Sec3 rename de equipo: como la cuenta nunca cambia de nombre
-#             (Pomelo -> Pomelo siempre), el hostname ahora se arma con el
-#             FullName leido en Sec2, no con el Name de la cuenta local.
+#  [REDISENO] Sec3: el hostname se arma con el nombre leido (FullName), no con
+#             el Name de la cuenta local.
 #
-#  [BUG 3/4 YA NO APLICA] El cacheo del tipo de chasis al inicio del script
-#             (ver v4) existia porque Rename-LocalUser invalidaba el token
-#             SID de la sesion y rompia Get-CimInstance despues. Como ya no
-#             se renombra la cuenta, el token nunca se invalida - se saca el
-#             cacheo temprano y la deteccion de chasis se hace directo en
-#             Sec3, donde se usa.
+#  [BUG 3/4 YA NO APLICA] Como no se renombra la cuenta, el token SID nunca se
+#             invalida: la deteccion de chasis se hace directo en Sec3.
 #
 #  [REDISENO] Fin de script: llama a Script 3 pasando -ModoCadena, para que
 #             S3 corra las 20 secciones sin preguntar (el menu de seleccion
@@ -77,12 +90,16 @@ function Write-Log {
 }
 
 # Funcion auxiliar: limpiar nombre para usar en nombre de equipo
-# Solo letras, numeros y guiones - maximo 7 caracteres - mayusculas
+# Quita tildes/dieresis/enie, deja solo letras, numeros y guiones,
+# maximo 7 caracteres, mayusculas, sin guiones en los extremos.
 function Get-CleanComputerPrefix {
     param([string]$Name)
-    $clean = $Name -replace '[^a-zA-Z0-9-]', ''
+    # Normalizar ANTES de filtrar: separa la letra de su tilde y se descarta la tilde
+    $clean = $Name.Normalize([Text.NormalizationForm]::FormD) -replace '\p{M}', ''
+    $clean = $clean -replace '[^a-zA-Z0-9-]', ''
+    $clean = $clean.Trim('-')
     $clean = ($clean.Substring(0, [Math]::Min(7, $clean.Length))).ToUpper()
-    return $clean
+    return $clean.Trim('-')
 }
 
 # ==============================================================================
@@ -93,7 +110,7 @@ $LlamarScript3 = $true    # $true  = llama al Script 3 al finalizar (normal)
 # ==============================================================================
 
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  2RenameLaptop-Desktop-Claude-v5.ps1  INICIO" "INFO" "Magenta"
+Write-Log "  2RenameLaptop-Desktop-Claude.ps1 (v7)  INICIO" "INFO" "Magenta"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Usuario  : $env:USERNAME en $env:COMPUTERNAME" "INFO" "Cyan"
 Write-Log "PS Version: $($PSVersionTable.PSVersion)" "INFO" "Cyan"
@@ -155,7 +172,9 @@ if (Test-Path "HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration") {
 Write-Log "--- [SECCION 1] Completada ---" "INFO" "Yellow"
 
 # ==============================================================================
-# SECCION 2 - NOMBRE PARA WINDOWS HELLO (FullName, Pomelo se queda como cuenta)
+# SECCION 2 - NOMBRE PARA WINDOWS HELLO (FullName, la cuenta no se renombra)
+# Con instalacion por Rufus la cuenta ya existe con el nombre del cliente y no
+# hay cuenta "Pomelo": en ese caso no hay nada que hacer.
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "--- SECCION 2: NOMBRE WINDOWS HELLO ---" "INFO" "Yellow"
@@ -164,7 +183,7 @@ try {
     $pomeloUser = Get-LocalUser -Name "Pomelo" -ErrorAction SilentlyContinue
 
     if (-not $pomeloUser) {
-        Write-Log "  [WARN] La cuenta 'Pomelo' no existe en este equipo." "WARN" "Yellow"
+        Write-Log "  [i] No hay cuenta 'Pomelo' (instalacion con Rufus: la cuenta ya tiene el nombre del cliente). Nada que hacer." "INFO" "Gray"
     } elseif ($pomeloUser.FullName -eq $nuevoUsuario) {
         Write-Log "  [OK] FullName ya es '$nuevoUsuario'. Nada que hacer." "INFO" "Green"
     } else {
@@ -188,6 +207,10 @@ $renameOK = $false
 
 # --- Generar prefijo limpio a partir del nombre para Windows Hello ---
 $userPrefix = Get-CleanComputerPrefix -Name $nuevoUsuario
+if ([string]::IsNullOrWhiteSpace($userPrefix)) {
+    Write-Log "  [WARN] El nombre no tiene caracteres validos para hostname. Se usa 'PC'." "WARN" "Yellow"
+    $userPrefix = "PC"
+}
 Write-Log "  Prefijo generado: $userPrefix (de '$nuevoUsuario')" "INFO" "Cyan"
 
 # --- Verificar nombre actual ---
@@ -254,7 +277,7 @@ Write-Log "--- [SECCION 3] Completada ---" "INFO" "Yellow"
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  2RenameLaptop-Desktop-Claude-v5.ps1  FIN" "INFO" "Green"
+Write-Log "  2RenameLaptop-Desktop-Claude.ps1 (v7)  FIN" "INFO" "Green"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Rename OK  : $renameOK" "INFO" "Cyan"
 Write-Log "Log        : $global:LogFile" "INFO" "Cyan"

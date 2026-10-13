@@ -1,12 +1,49 @@
 # ==============================================================================
-# Nombre Script: "3TuPcVolaraClaude.ps1" version 6 (unificada) 12/09/2026
-# Basado en: "3TuPcVolaraClaude.ps1"	version 2
+# Nombre Script: "3TuPcVolaraClaude.ps1" version 7  12/10/2026
+# Basado en: "3TuPcVolaraClaude.ps1"  version 6 (unificada) 12/09/2026
 # Revisado y corregido por: Claude (Anthropic) - 10/03/2026
 # Actualizado por: Claude (Anthropic) - 2026-03-16
 # Actualizado por: Claude (Anthropic) - 2026-06-02
 # Actualizado por: Claude (Anthropic) - 2026-08-16
+# Actualizado por: Claude (Anthropic) - 2026-10-12
 # Requiere: PowerShell 7 | Administrador | W10 IoT LTSC
 # ==============================================================================
+#
+# CAMBIOS 2026-10-12 (version 7):
+#
+#  [SECCION 10] Bluetooth (bthserv, BluetoothUserService), huella/Windows Hello
+#               (WbioSrvc) y touch/lapiz (TabletInputService) ya NO se deshabilitan
+#               siempre: solo si el equipo no trae ese hardware. Deteccion:
+#                 - Bluetooth: radio presente en PnP (clase Bluetooth, sin contar
+#                   dispositivos emparejados ni enumeradores BTH*)
+#                 - Biometria: clase Biometric, o camara infrarroja de Windows Hello
+#                 - Touch/lapiz: GetSystemMetrics(SM_DIGITIZER), independiente del idioma
+#               Si la deteccion falla, el servicio NO se toca. Si hay hardware y una
+#               corrida anterior lo dejo en Disabled, se restaura a Manual.
+#
+#  [SECCION 15] BUG REAL: el filtro de tareas programadas miraba el NOMBRE de la tarea
+#               ("*Microsoft*" / "*Windows*"), pero casi ninguna tarea de Windows lo
+#               lleva en el nombre (MsCtfMonitor, Schedule Scan, ScheduledDefrag...),
+#               asi que se deshabilitaban tareas del propio Windows. Ahora se filtra
+#               por RUTA (\Microsoft\*) y se respetan las tareas propias (Core Temp,
+#               MantenimientoSemanal, TuPcVeloz, RustDesk, KDE). Inicio: se conservan
+#               RustDesk, KDE Connect y Defender/Seguridad de Windows; se suma la
+#               clave de 32 bits (WOW6432Node).
+#
+#  [SECCION 5]  Las claves de BackgroundAccessApplications se llaman como el
+#               PackageFamilyName (ej: Microsoft.BingWeather_8wekyb3d8bbwe), no como el
+#               nombre corto; antes se creaban claves que Windows ignoraba. Ahora se
+#               busca el paquete instalado y solo se actua sobre los que existen.
+#
+#  [SECCION 19] Descarga EmptyStandbyList.exe (idempotente, mismo origen que el Paso
+#               3.5 del S4) ANTES de arrancar el servicio, porque AutoRAM lo necesita
+#               desde el primer arranque y el S4 corre despues. Comentario de nssm
+#               corregido: no lo instala el S1, lo instala esta seccion via Chocolatey
+#               si falta (o el config maestro del S4).
+#
+#  [SECCION 18] El chequeo de CTF Loader pasa antes del log "Completada" y sin tildes.
+#
+#  [LOGS] Sin numero de version en los mensajes de inicio y fin.
 #
 # CAMBIOS 2026-09-12 (version 6):
 #
@@ -46,7 +83,6 @@
 #
 #  [SECCION 19] Agregada verificacion de nssm antes de instalar servicio AutoRAM:
 #               - Si nssm no esta en PATH, intenta instalarlo via Chocolatey
-#               - Choco ya garantizado por Script 1 (InstallAppsDesktop-Automatico0.config)
 #               - Fallback con mensaje de error claro si choco tampoco esta disponible
 #               - Refresca PATH post-instalacion para que nssm quede disponible
 #                 en la misma sesion sin necesidad de reiniciar
@@ -68,7 +104,6 @@
 #               - Borrado fisico de carpetas con takeown + icacls SID *S-1-5-32-544
 #               - Eliminacion de acceso directo en Menu Inicio
 #               NOTA: takeown usa /d y (ingles) porque IoT LTSC viene en ingles
-##  
 #
 # ==============================================================================
 # ADVERTENCIA: Ejecutar siempre como Administrador
@@ -146,8 +181,45 @@ $SERVICIOS_RED_PROTEGIDOS = @(
     "WSearch"            # Windows Search               - barra de busqueda Inicio
 )
 
+# ==============================================================================
+# DETECCION DE HARDWARE OPCIONAL (Bluetooth / biometria / touch-lapiz)
+# Devuelven $true / $false, o $null si la deteccion fallo (en ese caso la
+# Seccion 10 NO toca el servicio: ante la duda se conserva).
+# ==============================================================================
+function Test-HayBluetooth {
+    if (-not (Get-Command Get-PnpDevice -ErrorAction SilentlyContinue)) { return $null }
+    # Se descartan dispositivos emparejados y enumeradores (InstanceId BTH*, BTHENUM*):
+    # lo que queda son los radios reales (USB\, PCI\, ACPI\, UART\...)
+    $radios = @(Get-PnpDevice -Class Bluetooth -PresentOnly -ErrorAction SilentlyContinue |
+                Where-Object { $_.InstanceId -notmatch '^BTH' })
+    return ($radios.Count -gt 0)
+}
+
+function Test-HayBiometrico {
+    if (-not (Get-Command Get-PnpDevice -ErrorAction SilentlyContinue)) { return $null }
+    $bio = @(Get-PnpDevice -Class Biometric -PresentOnly -ErrorAction SilentlyContinue)
+    if ($bio.Count -gt 0) { return $true }
+    # Camara infrarroja (Windows Hello facial)
+    $cam = @(Get-PnpDevice -Class Camera, Image -PresentOnly -ErrorAction SilentlyContinue |
+             Where-Object { $_.FriendlyName -match '\bIR\b|Infrared|Hello' })
+    return ($cam.Count -gt 0)
+}
+
+function Test-HayTouch {
+    try {
+        if (-not ([System.Management.Automation.PSTypeName]'TuPcVeloz.Digitizer').Type) {
+            Add-Type -Namespace TuPcVeloz -Name Digitizer -MemberDefinition '[DllImport("user32.dll")] public static extern int GetSystemMetrics(int nIndex);'
+        }
+        $flags = [TuPcVeloz.Digitizer]::GetSystemMetrics(94)   # SM_DIGITIZER
+        # 0x01/0x02 = touch integrado/externo, 0x04/0x08 = lapiz integrado/externo
+        return (($flags -band 0x0F) -ne 0)
+    } catch {
+        return $null
+    }
+}
+
 Write-Log "=============================================" "INFO" "Cyan"
-Write-Log "   3TuPcVolaraClaude-v3.ps1  -  INICIO" "INFO" "Cyan"
+Write-Log "   3TuPcVolaraClaude.ps1  -  INICIO" "INFO" "Cyan"
 Write-Log "=============================================" "INFO" "Cyan"
 Write-Log "Usuario  : $env:USERNAME en $env:COMPUTERNAME" "INFO" "Cyan"
 Write-Log "PS Version: $($PSVersionTable.PSVersion)" "INFO" "Cyan"
@@ -273,6 +345,7 @@ try {
     powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMIN 100
     powercfg -setdcvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMAX 100
     powercfg -setdcvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMIN 100
+    powercfg /setactive SCHEME_CURRENT
     Write-Log "  [OK] CPU forzada al 100% (sin throttling)." "INFO" "Green"
 
     powercfg /change monitor-timeout-ac 120
@@ -294,7 +367,10 @@ function Invoke-Seccion05 {
 #######################################################
 # SECCION 5 - APPS EN SEGUNDO PLANO
 # Sin bloqueo global (rompia red, busqueda y VPN)
-# Se deshabilitan individualmente solo las apps no criticas
+# Se deshabilitan individualmente solo las apps no criticas.
+# Las claves de BackgroundAccessApplications se llaman como el
+# PackageFamilyName (Microsoft.BingWeather_8wekyb3d8bbwe), no como el nombre
+# corto: se busca el paquete instalado y solo se actua sobre los que existen.
 #######################################################
 Write-Log "" "INFO" "White"
 Write-Log "--- SECCION 5: APPS EN SEGUNDO PLANO ---" "INFO" "Yellow"
@@ -324,19 +400,35 @@ $appsNoEsenciales = @(
     "Microsoft.WindowsFeedbackHub"
 )
 
-$bgPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications"
+# Paquetes instalados (nombre corto -> PackageFamilyName). Se consulta con
+# Windows PowerShell 5.1 porque el modulo Appx no es confiable dentro de PS7.
+$instalados = @{}
+try {
+    $json = (& powershell.exe -NoProfile -NonInteractive -Command "Get-AppxPackage | Select-Object Name,PackageFamilyName | ConvertTo-Json -Compress" 2>$null) -join "`n"
+    if ($json) {
+        foreach ($p in @($json | ConvertFrom-Json)) { $instalados[$p.Name] = $p.PackageFamilyName }
+    }
+} catch {
+    Write-Log "  [WARN] No se pudo listar los paquetes Appx: $_" "WARN" "Yellow"
+}
+
+$bgPath       = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications"
+$deshabilitadas = 0
+$noInstaladas   = 0
 foreach ($app in $appsNoEsenciales) {
+    if (-not $instalados.ContainsKey($app)) { $noInstaladas++; continue }
     try {
-        $appPath = "$bgPath\$app"
+        $appPath = "$bgPath\$($instalados[$app])"
         if (!(Test-Path $appPath)) { New-Item -Path $appPath -Force | Out-Null }
         Set-ItemProperty -Path $appPath -Name "Disabled"       -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
         Set-ItemProperty -Path $appPath -Name "DisabledByUser" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
         Write-Log "  [OK] Deshabilitada: $app" "INFO" "Gray"
+        $deshabilitadas++
     } catch {
         Write-Log "  [WARN] Error deshabilitando $app`: $_" "WARN" "Yellow"
     }
 }
-Write-Log "  [OK] Apps no esenciales deshabilitadas individualmente." "INFO" "Green"
+Write-Log "  [OK] Segundo plano: $deshabilitadas apps deshabilitadas, $noInstaladas de la lista no estan instaladas." "INFO" "Green"
 Write-Log "--- [SECCION 5] Completada ---" "INFO" "Yellow"
 }
 
@@ -474,24 +566,25 @@ function Invoke-Seccion10 {
     # Servicios no esenciales
 #######################################################
 # SECCION 10 - SERVICIOS NO ESENCIALES
+# SysMain NO esta en la lista: lo decide la Seccion 11 segun disco y RAM.
+# Bluetooth / huella / touch se resuelven mas abajo segun el hardware.
 #######################################################
 Write-Log "" "INFO" "White"
 Write-Log "--- SECCION 10: SERVICIOS NO ESENCIALES ---" "INFO" "Yellow"
 Write-Log "  Servicios protegidos: $($SERVICIOS_RED_PROTEGIDOS -join ', ')" "WARN" "Yellow"
 
 $serviciosDisabled = @(
-    "BcastDVRUserService",   "BluetoothUserService",  "bthserv",
-    "DiagTrack",             "dmwappushservice",      "Fax",
-    "FontCache",             "lfsvc",                 "MapsBroker",
-    "MessagingService",      "MixedRealityOpenXRSvc", "OneSyncSvc",
-    "PhoneSvc",              "PimIndexMaintenanceSvc","RemoteRegistry",
-    "shpamsvc",              "TabletInputService",    "TapiSrv",
+    "BcastDVRUserService",   "DiagTrack",             "dmwappushservice",
+    "Fax",                   "FontCache",             "lfsvc",
+    "MapsBroker",            "MessagingService",      "MixedRealityOpenXRSvc",
+    "OneSyncSvc",            "PhoneSvc",              "PimIndexMaintenanceSvc",
+    "RemoteRegistry",        "shpamsvc",              "TapiSrv",
     "UnistoreSvc",           "UserDataSvc",           "vmicguestinterface",
     "vmicheartbeat",         "vmickvpexchange",       "vmicrdv",
     "vmicshutdown",          "vmictimesync",          "vmicvmsession",
-    "WalletService",         "WbioSrvc",              "wisvc",
-    "WMPNetworkSvc",         "XblAuthManager",        "XblGameSave",
-    "XboxGipSvc",            "XboxNetApiSvc",         "SysMain"
+    "WalletService",         "wisvc",                 "WMPNetworkSvc",
+    "XblAuthManager",        "XblGameSave",           "XboxGipSvc",
+    "XboxNetApiSvc"
 )
 
 foreach ($service in $serviciosDisabled) {
@@ -510,6 +603,44 @@ foreach ($service in $serviciosDisabled) {
         }
     } else {
         Write-Log "  [i] Ya deshabilitado: $service" "INFO" "Gray"
+    }
+}
+
+# --- Servicios ligados a hardware opcional: solo se deshabilitan si el equipo
+#     NO trae ese hardware. Si lo trae se conservan (y si una corrida anterior
+#     los dejo en Disabled, se restauran a Manual, que es el valor de fabrica).
+#     Si la deteccion falla ($null), no se toca nada.
+$gruposHardware = @(
+    @{ Etiqueta = "Bluetooth";              Hay = (Test-HayBluetooth);  Servicios = @("bthserv", "BluetoothUserService") }
+    @{ Etiqueta = "Huella / Windows Hello"; Hay = (Test-HayBiometrico); Servicios = @("WbioSrvc") }
+    @{ Etiqueta = "Touch / lapiz";          Hay = (Test-HayTouch);      Servicios = @("TabletInputService") }
+)
+
+foreach ($grupo in $gruposHardware) {
+    if ($null -eq $grupo.Hay) {
+        Write-Log "  [WARN] No se pudo detectar el hardware '$($grupo.Etiqueta)': servicios sin cambios." "WARN" "Yellow"
+        continue
+    }
+    Write-Log "  Hardware '$($grupo.Etiqueta)': $(if ($grupo.Hay) { 'PRESENTE' } else { 'no detectado' })" "INFO" "Cyan"
+
+    foreach ($nombre in $grupo.Servicios) {
+        $svc = Get-Service -Name $nombre -ErrorAction SilentlyContinue
+        if (-not $svc) { continue }
+
+        if ($grupo.Hay) {
+            if ($svc.StartType -eq 'Disabled') {
+                Set-Service $nombre -StartupType Manual -ErrorAction SilentlyContinue
+                Write-Log "  [FIX] $nombre estaba Disabled y el equipo tiene el hardware -> restaurado a Manual." "WARN" "Magenta"
+            } else {
+                Write-Log "  [OK] $nombre conservado (hay hardware)." "INFO" "Green"
+            }
+        } elseif ($svc.StartType -ne 'Disabled') {
+            Stop-Service $nombre -Force                -ErrorAction SilentlyContinue
+            Set-Service  $nombre -StartupType Disabled -ErrorAction SilentlyContinue
+            Write-Log "  [OK] Disabled: $nombre (sin hardware)." "INFO" "Gray"
+        } else {
+            Write-Log "  [i] Ya deshabilitado: $nombre" "INFO" "Gray"
+        }
     }
 }
 
@@ -767,29 +898,29 @@ Write-Log "--- [SECCION 14] Completada ---" "INFO" "Yellow"
 }
 
 function Invoke-Seccion15 {
-    # Programas de inicio
+    # Programas de inicio y tareas programadas de terceros
 #######################################################
-# SECCION 15 - PROGRAMAS DE INICIO
+# SECCION 15 - PROGRAMAS DE INICIO Y TAREAS DE TERCEROS
+# Pensada para un equipo recien instalado. Si se corre suelta en un equipo ya
+# desplegado, respeta lo propio (RustDesk, KDE Connect, Core Temp,
+# MantenimientoSemanal) y no toca nada bajo \Microsoft\.
 #######################################################
 Write-Log "" "INFO" "White"
-Write-Log "--- SECCION 15: PROGRAMAS DE INICIO ---" "INFO" "Yellow"
+Write-Log "--- SECCION 15: PROGRAMAS DE INICIO Y TAREAS ---" "INFO" "Yellow"
 
-$excludeRun = @(
-    "Windows Security notification icon",
-    "Windows Defender",
-    "SecurityHealth",
-    "WindowsDefender",
-    "BingSvc"
-)
+# --- Inicio (claves Run): se conservan RustDesk, KDE Connect y Defender ---
+$conservarRun = '(?i)RustDesk|KDE.?Connect|SecurityHealth|Windows Security|Windows Defender|WindowsDefender|BingSvc'
+$propiedadesPS = @('PSPath', 'PSParentPath', 'PSChildName', 'PSDrive', 'PSProvider')
 
 foreach ($path in @(
     "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run",
-    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run"
 )) {
     if (Test-Path $path) {
-        $props = (Get-ItemProperty -Path $path).PSObject.Properties | Where-Object { $_.Name -notlike "PS*" }
+        $props = (Get-ItemProperty -Path $path).PSObject.Properties | Where-Object { $_.Name -notin $propiedadesPS }
         foreach ($prop in $props) {
-            if ($excludeRun -contains $prop.Name) {
+            if ($prop.Name -match $conservarRun) {
                 Write-Log "  [i] Conservado: $($prop.Name)" "INFO" "Green"
             } else {
                 Remove-ItemProperty -Path $path -Name $prop.Name -ErrorAction SilentlyContinue
@@ -799,14 +930,30 @@ foreach ($path in @(
     }
 }
 
-Get-ScheduledTask | Where-Object {
+# --- Tareas programadas: SOLO de terceros ---
+# El filtro anterior miraba el NOMBRE de la tarea ("*Microsoft*" / "*Windows*"),
+# pero casi ninguna tarea de Windows lo lleva en el nombre (MsCtfMonitor,
+# Schedule Scan, ScheduledDefrag...), asi que se deshabilitaban tareas del propio
+# Windows. El filtro correcto es la RUTA (\Microsoft\*). Se mantiene ademas la
+# exclusion por nombre de antes, y las tareas propias.
+$conservarTareas = '(?i)Core ?Temp|Mantenimiento|TuPcVeloz|RustDesk|KDE'
+
+$tareasTerceros = @(Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object {
     $_.State -eq 'Ready' -and
+    $_.TaskPath -notlike '\Microsoft\*' -and
     $_.TaskName -notlike '*Microsoft*' -and
-    $_.TaskName -notlike '*Windows*'
-} | ForEach-Object {
-    Disable-ScheduledTask -InputObject $_ -ErrorAction SilentlyContinue
-    Write-Log "  [i] Tarea deshabilitada: $($_.TaskName)" "INFO" "Gray"
+    $_.TaskName -notlike '*Windows*' -and
+    "$($_.TaskPath)$($_.TaskName)" -notmatch $conservarTareas
+})
+
+foreach ($tarea in $tareasTerceros) {
+    Disable-ScheduledTask -InputObject $tarea -ErrorAction SilentlyContinue | Out-Null
+    Write-Log "  [i] Tarea deshabilitada: $($tarea.TaskPath)$($tarea.TaskName)" "INFO" "Gray"
 }
+if ($tareasTerceros.Count -eq 0) {
+    Write-Log "  [i] No hay tareas de terceros para deshabilitar." "INFO" "Gray"
+}
+
 Write-Log "  [OK] Inicio limpiado." "INFO" "Green"
 Write-Log "--- [SECCION 15] Completada ---" "INFO" "Yellow"
 }
@@ -880,14 +1027,9 @@ function Invoke-Seccion18 {
 Write-Log "" "INFO" "White"
 Write-Log "--- SECCION 18: VERIFICACION FINAL ---" "INFO" "Yellow"
 
+# SysMain lo decide la Seccion 11 (segun disco y RAM); aca solo se informa.
 $sm = Get-Service -Name "SysMain" -ErrorAction SilentlyContinue
-if ($sm -and $sm.StartType -ne 'Disabled') {
-    Stop-Service "SysMain" -Force              -ErrorAction SilentlyContinue
-    Set-Service  "SysMain" -StartupType Disabled -ErrorAction SilentlyContinue
-    Write-Log "  [OK] SysMain deshabilitado." "INFO" "Green"
-} else {
-    Write-Log "  [i] SysMain ya deshabilitado." "INFO" "Gray"
-}
+if ($sm) { Write-Log "  [i] SysMain: $($sm.StartType) / $($sm.Status) (decidido en Seccion 11)." "INFO" "Gray" }
 
 $bits = Get-Service -Name "BITS" -ErrorAction SilentlyContinue
 if ($bits -and $bits.StartType -eq 'Disabled') {
@@ -908,16 +1050,17 @@ foreach ($svcName in $SERVICIOS_RED_PROTEGIDOS) {
         Write-Log "  [OK] $svcName activo." "INFO" "Green"
     }
 }
-Write-Log "--- [SECCION 18] Completada ---" "INFO" "Yellow"
 
-# Verificar CTF Loader // 28/07/2026 chatgpt
+# Verificar CTF Loader (ctfmon.exe: servicios de entrada de texto, idioma y teclado)
 if (-not (Get-Process ctfmon -ErrorAction SilentlyContinue)) {
     Start-Process "$env:windir\System32\ctfmon.exe"
     Write-Log "  [FIX] CTF Loader (ctfmon.exe) iniciado." "WARN" "Magenta"
 }
 else {
-    Write-Log "  [OK] CTF Loader ya estaba ejecutándose." "INFO" "Green"
+    Write-Log "  [OK] CTF Loader ya estaba ejecutandose." "INFO" "Green"
 }
+
+Write-Log "--- [SECCION 18] Completada ---" "INFO" "Yellow"
 }
 
 function Invoke-Seccion19 {
@@ -994,7 +1137,27 @@ try {
             throw "AutoRAM-Monitor.ps1 no encontrado"
         }
 
-        # --- Verificar disponibilidad de nssm (instalado en S1 via choco) ---
+        # --- EmptyStandbyList.exe: lo necesita AutoRAM-Monitor desde el primer
+        #     arranque y el S4 (Paso 3.5) corre despues de esta seccion. Se baja
+        #     aca (idempotente, mismo origen que el S4) para que exista antes de
+        #     arrancar el servicio. Si falla, el Paso 3.5 del S4 lo reintenta.
+        $rutaTools = Join-Path $rutaAutomatico "Tools"
+        $rutaEsl   = Join-Path $rutaTools "EmptyStandbyList.exe"
+        if (Test-Path $rutaEsl) {
+            Write-Log "  [OK] EmptyStandbyList.exe ya presente en Tools\" "INFO" "Green"
+        } else {
+            try {
+                if (-not (Test-Path $rutaTools)) { New-Item -ItemType Directory -Path $rutaTools -Force | Out-Null }
+                Invoke-WebRequest -Uri "https://raw.githubusercontent.com/stefanpejcic/EmptyStandbyList/master/EmptyStandbyList.exe" -OutFile $rutaEsl -UseBasicParsing -ErrorAction Stop
+                Write-Log "  [OK] EmptyStandbyList.exe descargado en Tools\" "INFO" "Green"
+            } catch {
+                Write-Log "  [WARN] No se pudo descargar EmptyStandbyList.exe: $($_.Exception.Message). El Paso 3.5 del S4 lo reintenta." "WARN" "Yellow"
+            }
+        }
+
+        # --- Verificar disponibilidad de nssm ---
+        # En este punto de la cadena nssm normalmente todavia no esta (lo instala el
+        # config maestro del S4, que corre despues): se instala aca via Chocolatey.
         if (-not (Get-Command nssm -ErrorAction SilentlyContinue)) {
             Write-Log "  [WARN] nssm no encontrado en PATH. Intentando instalar via Chocolatey..." "WARN" "Yellow"
             if (Get-Command choco -ErrorAction SilentlyContinue) {
@@ -1033,8 +1196,8 @@ try {
         & nssm set     $nombreServicio AppStderr "C:\Users\Public\Documents\AutoTemp\AutoRAM-nssm.log"
         & nssm set     $nombreServicio AppRotateFiles 1
         & nssm set     $nombreServicio AppRotateBytes 1048576
-		& nssm set     $nombreServicio AppExit Default Exit
-		& nssm set     $nombreServicio AppThrottle 1500
+        & nssm set     $nombreServicio AppExit Default Exit
+        & nssm set     $nombreServicio AppThrottle 1500
         & nssm start   $nombreServicio
 
         Start-Sleep -Seconds 3
@@ -1109,12 +1272,12 @@ $TablaSecciones = [ordered]@{
      7 = "Windows Update - Delivery Optimization"
      8 = "Efectos visuales (maximo rendimiento)"
      9 = "Memoria virtual (pagefile)"
-    10 = "Servicios no esenciales"
+    10 = "Servicios no esenciales (BT/huella/touch segun hardware)"
     11 = "Prefetch / SysMain (inteligente v2)"
     12 = "Windows Update y telemetria"
     13 = "Desinstalar WMP, IE11 y Fax"
     14 = "Limpieza de archivos temporales"
-    15 = "Programas de inicio"
+    15 = "Programas de inicio y tareas de terceros"
     16 = "Tareas programadas pesadas"
     17 = "Optimizaciones finales de registro"
     18 = "Verificacion final de servicios (+ CTF Loader)"
@@ -1190,7 +1353,7 @@ foreach ($n in $SeccionesAEjecutar) {
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "=============================================" "INFO" "Cyan"
-Write-Log "   3TuPcVolaraClaude-v3.ps1  -  FIN" "INFO" "Green"
+Write-Log "   3TuPcVolaraClaude.ps1  -  FIN" "INFO" "Green"
 Write-Log "=============================================" "INFO" "Cyan"
 Write-Log "Log      : $global:LogFile" "INFO" "Cyan"
 Write-Log "Errores  : $global:ErrorLog" "INFO" "Cyan"

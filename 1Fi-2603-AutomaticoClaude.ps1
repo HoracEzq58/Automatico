@@ -106,11 +106,38 @@ Write-Log "Permisos de Administrador: OK" "INFO" "Green"
 Write-Log "" "INFO" "White"
 Write-Log "--- SECCION 00: DATOS DEL CLIENTE ---" "INFO" "Yellow"
 
-$nuevoUsuario = Read-Host "Nombre para Windows Hello (pantalla de bienvenida, ej: 'Familia Perez')"
-while ([string]::IsNullOrWhiteSpace($nuevoUsuario)) {
-    Write-Log "  [WARN] El nombre no puede quedar vacio." "WARN" "Yellow"
-    $nuevoUsuario = Read-Host "Nombre para Windows Hello"
+# >>> DESDE ACA REEMPLAZA (antes: $nuevoUsuario = Read-Host ... + el while) >>>
+# Si Rufus ya creo la cuenta local en la instalacion, se reutiliza ese nombre.
+# Se descartan las integradas por SID: -500 Administrator, -501 Guest,
+# -503 DefaultAccount, -504 WDAGUtilityAccount.
+$nuevoUsuario = $null
+try {
+    $cuentas = @(Get-LocalUser -ErrorAction Stop | Where-Object {
+        $_.Enabled -and $_.SID.Value -notmatch '-(500|501|503|504)$'
+    })
+    if ($cuentas.Count -eq 1) {
+        $c = $cuentas[0]
+        $nuevoUsuario = if ([string]::IsNullOrWhiteSpace($c.FullName)) { $c.Name } else { $c.FullName }
+        Write-Log "  [OK] Cuenta local detectada: '$($c.Name)'. No se pregunta el nombre." "INFO" "Green"
+    } elseif ($cuentas.Count -gt 1) {
+        Write-Log "  [WARN] Hay $($cuentas.Count) cuentas locales ($($cuentas.Name -join ', ')). Se pregunta el nombre." "WARN" "Yellow"
+    } else {
+        Write-Log "  [i] No hay cuenta local creada por el usuario. Se pregunta el nombre." "INFO" "Gray"
+    }
+} catch {
+    Write-Log "  [WARN] No se pudo consultar las cuentas locales: $_" "WARN" "Yellow"
 }
+
+if ([string]::IsNullOrWhiteSpace($nuevoUsuario)) {
+    $nuevoUsuario = Read-Host "Nombre para Windows Hello (pantalla de bienvenida, ej: 'Familia Perez')"
+    while ([string]::IsNullOrWhiteSpace($nuevoUsuario)) {
+        Write-Log "  [WARN] El nombre no puede quedar vacio." "WARN" "Yellow"
+        $nuevoUsuario = Read-Host "Nombre para Windows Hello"
+    }
+}
+
+$respuestas = @{
+    NuevoUsuario = $nuevoUsuario.Trim()
 
 $respuestas = @{
     NuevoUsuario = $nuevoUsuario.Trim()

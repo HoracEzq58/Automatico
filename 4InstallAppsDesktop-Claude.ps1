@@ -1,54 +1,68 @@
 # ================================================================================
-# Nombre Script: "4InstallAppsDesktop-Claude.ps1" version 6 (unificada) 12/09/2026
-# Basado en: "4ExtraeNew-InstallAppsDesktop-Claude.ps1"			version 3
-# Reescrito por: Claude (Anthropic) - 2026-09-12
+# Nombre Script: "4InstallAppsDesktop-Claude.ps1"  version 7  12/10/2026
+# Basado en: version 6 (unificada) 12/09/2026
+# Reescrito por: Claude (Anthropic) - 2026-10-12
 # Requiere: PowerShell 7 | Administrador | Chocolatey instalado
 # Flujo: 1)Instalar -> 1.5)ConfigEverything -> 2)Verificar faltantes ->
-#        3)Renombrar SSD -> 3.5)EmptyStandbyList -> FIN (sin Script 5)
+#        2.5)Asegurar Chrome -> 3)Renombrar SSD -> 3.5)EmptyStandbyList ->
+#        4)Macros TinyTask -> reinicio (solo si se corre completo)
 # ================================================================================
 #
-# CAMBIOS v4 (2026-09-12):
+# USO:
+#   Completo (como siempre):   pwsh -File .\4InstallAppsDesktop-Claude.ps1
+#   Solo algunos pasos:        pwsh -File .\4InstallAppsDesktop-Claude.ps1 -Solo 2.5,4
+#                              (desde una consola pwsh ya abierta conviene usar
+#                               comillas:  .\4InstallAppsDesktop-Claude.ps1 -Solo '2.5','4' )
+#   Pasos validos: 1, 1.5, 2, 2.5, 3, 3.5, 4
+#   Con -Solo NO se reinicia el equipo al final.
 #
-#  [PASO 1] Bajado de 3 a 2 intentos para el config completo: normal y
-#           --ignore-checksums. Se saca el 3er intento con --force a nivel
-#           config completo (mas riesgo que beneficio real segun experiencia
-#           de campo). El Paso 2 sigue haciendo de control: compara maestro
-#           vs instalado y reintenta individualmente los que falten, ahi si
-#           con --force como ultimo recurso (Install-ChocoConReintentos,
-#           sin cambios) porque ahi el riesgo es acotado a un solo paquete.
+# CAMBIOS v7 (2026-10-12):
 #
-#  [PASO 1.5] BUG REAL CORREGIDO: la clave usada para Everything.ini era
-#           "hide_empty_search_results", que no existe. La clave real,
-#           documentada por voidtools, es "hide_results_when_search_is_empty"
-#           (asi lo tenia bien el script suelto ConfigEverything.ps1). Se
-#           suman ademas las mismas configuraciones extra de ese script:
-#           exclude_system_files, exclude_hidden_files, show_status_bar=0,
-#           match_path=0. Al final se reinicia Everything.exe.
+#  [PARAMETRO -Solo] Cada paso es independiente: se puede ejecutar uno solo
+#           si fallo. Sin -Solo corre todo y reinicia como antes.
 #
-#  [PASO 3 Y 3.5 ELIMINADOS] (antes "revisar sobrantes" y "actualizar todos
-#           los paquetes"). En una instalacion limpia con el config maestro
-#           homologado no tienen nada que hacer: no hay sobrantes ni nada
-#           para actualizar (el config sin versiones fijas ya instalo la
-#           ultima version disponible en el Paso 1). Ademas duplican lo que
-#           ya hace MantenimientoSemanal semanalmente en cada cliente
-#           (incluyendo la misma exclusion de rustdesk.install del upgrade).
-#           Sacarlos deja este script SIN NINGUN Read-Host: el ultimo que
-#           quedaba era el "Desinstalar 'x'? (s/n)" del viejo Paso 3.
-#           Los antiguos Paso 4 y Paso 4.5 se renumeran a Paso 3 y Paso 3.5.
+#  [CODIGOS 1641 y 3010] Son EXITO en Chocolatey (reinicio pendiente). Antes
+#           solo se aceptaba 0 y un Chrome bien instalado podia contarse como
+#           fallo y gatillar reintentos innecesarios.
 #
-#  [FIN DE SCRIPT] Se elimina el bloque completo de llamado al Script 5
-#           (no solo el flag $LlamarScript5) porque S5 quedo descartado.
+#  [PASO 2] Si se corre solo, carga por su cuenta la lista del config maestro.
 #
-# ==============================================================================
-# CAMBIOS HEREDADOS DE v3 (se mantienen):
+#  [PASO 2.5 NUEVO] Asegura Google Chrome verificando chrome.exe real (no solo
+#           "choco list"). Si choco cree que esta instalado pero falta el exe,
+#           un "choco install" normal responde "ya instalado" con codigo 0 sin
+#           hacer nada: por eso reinstala directo con --force.
 #
-#  - Reintentos progresivos en el Paso 2 (recuperacion de faltantes):
+#  [PASO 3.6 NUEVO] Mudado del S1, Notepad++ ahora se instala desde este S4
+#
+#  [PASO 4 NUEVO] Macros TinyTask (ex MacrosTini-v3.ps1) integradas, al final
+#           para no competir por foco con Everything/instaladores:
+#           - Sin exit ni ErrorActionPreference Stop: si falla, loguea y sigue.
+#           - WaitForExit en vez de Wait-Process (evita falso timeout cuando
+#             la macro termina antes de llegar a esperar).
+#           - Sin Office se omiten solo Excel y Word; sin Chrome, solo Google.
+#           - Registro de macros ya hechas (Tools\TiniTask\MacrosHechas.txt):
+#             al repetir -Solo 4 no vuelve a correr las que ya funcionaron
+#             (anclar de nuevo podria desanclar). Para repetir todo, borrar
+#             ese archivo.
+#           - Cuenta regresiva de 10 s: NO tocar mouse ni teclado.
+#
+#  [REINICIO] Solo se reinicia si se corrio completo (sin -Solo).
+#
+# CAMBIOS v6 / v4 (se mantienen):
+#  - Paso 1 con 2 intentos para el config completo (normal e --ignore-checksums).
+#  - Paso 1.5: clave correcta hide_results_when_search_is_empty + extras.
+#  - Sin ningun Read-Host. S5 descartado.
+#  - Reintentos progresivos en la recuperacion individual de faltantes (Paso 2):
 #    normal -> --ignore-checksums -> --ignore-checksums --force
-#  - Deteccion de tipo de disco (SSD/HDD/Unspecified) con diccionario de
-#    marcas (brandMap) para nombres limpios sin redundancia de capacidad
-#  - EmptyStandbyList.exe: descarga idempotente desde GitHub, requerido por
-#    AutoRAM-Monitor en equipos con poca RAM
+#  - Deteccion de tipo de disco (SSD/HDD) con brandMap para el nombre del volumen
+#  - EmptyStandbyList.exe: descarga idempotente, requerido por AutoRAM-Monitor
 # ==============================================================================
+
+param([string[]]$Solo)
+
+# Acepta -Solo 2.5,4 tanto desde pwsh interactivo como desde -File
+$Solo = @($Solo | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+function Test-Paso { param([string]$Id) return (($Solo.Count -eq 0) -or ($Id -in $Solo)) }
 
 # ==============================================================================
 # CONFIGURACION GLOBAL Y LOGGING
@@ -101,6 +115,39 @@ function Get-ChocoInstalled {
     return $raw
 }
 
+# Funcion: detectar Google Chrome real (chrome.exe). Sin fallback a registro
+# (BLBeacon): queda huerfano tras un desinstalado a medias y da falso "instalado".
+function Test-GoogleChrome {
+    $rutas = @(
+        "$env:ProgramFiles\Google\Chrome\Application\chrome.exe"
+        "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+        "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+    )
+    foreach ($r in $rutas) {
+        if (Test-Path -LiteralPath $r -PathType Leaf) { return $true }
+    }
+    return $false
+}
+
+# Funcion: detectar Office 2021 / LTSC (ClickToRun o lista de desinstalacion)
+function Test-Office2021 {
+    foreach ($ruta in @(
+        'HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration'
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Office\ClickToRun\Configuration')) {
+        if (Test-Path -LiteralPath $ruta) {
+            $ids = [string](Get-ItemProperty -LiteralPath $ruta -ErrorAction SilentlyContinue).ProductReleaseIds
+            if ($ids -match '(?i)(ProPlus|Standard|Professional|HomeBusiness|ProjectPro|VisioPro).*2021|2021.*(ProPlus|Standard|Professional|HomeBusiness|ProjectPro|VisioPro)') { return $true }
+        }
+    }
+    foreach ($ruta in @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*')) {
+        $apps = Get-ItemProperty -Path $ruta -ErrorAction SilentlyContinue
+        if ($apps | Where-Object { $_.DisplayName -match '(?i)Office.*(LTSC|2021)|(LTSC|2021).*Office' }) { return $true }
+    }
+    return $false
+}
+
 # Funcion: instalar un paquete con reintentos progresivos
 # Intento 1: normal | Intento 2: --ignore-checksums | Intento 3: --ignore-checksums --force
 # Usada solo por el Paso 2 (recuperacion individual de faltantes) - aca el
@@ -131,7 +178,7 @@ function Install-ChocoConReintentos {
                 Invoke-Expression "$cmd 2>&1" | Out-Null
             }
 
-            if ($LASTEXITCODE -eq 0) {
+            if ($LASTEXITCODE -in 0, 1641, 3010) {
                 Write-Log "    [OK] $PackageId instalado (intento $n)." "INFO" "Green"
                 return $true
             } else {
@@ -153,11 +200,14 @@ function Install-ChocoConReintentos {
 # ==============================================================================
 
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  4ExtraeNew-InstallAppsDesktop-Claude-v4.ps1  INICIO" "INFO" "Magenta"
+Write-Log "  4InstallAppsDesktop-Claude.ps1 (v7)  INICIO" "INFO" "Magenta"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Usuario   : $env:USERNAME en $env:COMPUTERNAME" "INFO" "Cyan"
 Write-Log "PS Version: $($PSVersionTable.PSVersion)" "INFO" "Cyan"
 Write-Log "Log       : $global:LogFile" "INFO" "Cyan"
+if ($Solo.Count -gt 0) {
+    Write-Log "Modo -Solo: pasos $($Solo -join ', ')" "INFO" "Cyan"
+}
 
 # Verificar PowerShell 7+
 if ($PSVersionTable.PSVersion.Major -lt 7) {
@@ -183,18 +233,20 @@ Write-Log "Chocolatey: OK (v$chocoVer)" "INFO" "Green"
 $automaticoPath = "C:\Users\Public\Documents\Automatico"
 Set-Location $automaticoPath -ErrorAction SilentlyContinue
 
+# Variables compartidas entre pasos (el Paso 1 las llena; el Paso 2 las recarga si hace falta)
+$masterConfig     = Join-Path $automaticoPath "InstallAppsDesktop-Automatico.config"
+$paso1OK          = $false
+$expectedPackages = @()
+
 # ==============================================================================
 # PASO 1 - INSTALAR DESDE ARCHIVO MAESTRO (unico config, sin versiones fijas)
 # 2 intentos para todo el config: normal -> --ignore-checksums.
 # El Paso 2 hace de control: compara maestro vs instalado y resuelve
 # individualmente lo que estos 2 intentos no hayan podido resolver.
 # ==============================================================================
+if (Test-Paso '1') {
 Write-Log "" "INFO" "White"
 Write-Log "--- PASO 1: INSTALAR DESDE ARCHIVO MAESTRO ---" "INFO" "Yellow"
-
-$masterConfig     = Join-Path $automaticoPath "InstallAppsDesktop-Automatico.config"
-$paso1OK          = $false
-$expectedPackages = @()
 
 if (-not (Test-Path $masterConfig)) {
     Write-Log "  [ERROR] Archivo maestro no encontrado: $masterConfig" "ERROR" "Red"
@@ -204,7 +256,7 @@ if (-not (Test-Path $masterConfig)) {
 
     try {
         [xml]$masterXml   = Get-Content $masterConfig -Encoding UTF8
-        $expectedPackages = $masterXml.packages.package | ForEach-Object { $_.id }
+        $expectedPackages = @($masterXml.packages.package | ForEach-Object { $_.id })
         Write-Log "  Paquetes en maestro: $($expectedPackages.Count)" "INFO" "Cyan"
     } catch {
         Write-Log "  [ERROR] No se pudo parsear el XML maestro: $_" "ERROR" "Red"
@@ -214,7 +266,7 @@ if (-not (Test-Path $masterConfig)) {
     Write-Log "  [1/2] choco install config (normal)..." "INFO" "Yellow"
     try {
         choco install $masterConfig --limit-output --no-progress -y
-        if ($LASTEXITCODE -eq 0) {
+        if ($LASTEXITCODE -in 0, 1641, 3010) {
             Write-Log "  [OK] Instalacion inicial completada (intento 1)." "INFO" "Green"
             $paso1OK = $true
         } else {
@@ -231,7 +283,7 @@ if (-not (Test-Path $masterConfig)) {
         Write-Log "  [2/2] choco install config (--ignore-checksums)..." "INFO" "Yellow"
         try {
             choco install $masterConfig --ignore-checksums --limit-output --no-progress -y
-            if ($LASTEXITCODE -eq 0) {
+            if ($LASTEXITCODE -in 0, 1641, 3010) {
                 Write-Log "  [OK] Instalacion completada (intento 2, --ignore-checksums)." "INFO" "Green"
                 $paso1OK = $true
             } else {
@@ -246,14 +298,15 @@ if (-not (Test-Path $masterConfig)) {
 }
 
 Write-Log "--- [PASO 1] Completado ---" "INFO" "Yellow"
+}
 
 # ==============================================================================
 # PASO 1.5 - CONFIGURAR EVERYTHING
 # Se ejecuta aqui porque Chocolatey acaba de instalarlo en el Paso 1.
-# BUG CORREGIDO: la clave "hide_empty_search_results" no existe en Everything;
-# la clave real es "hide_results_when_search_is_empty". Se agregan ademas
-# las mismas configuraciones extra de ConfigEverything.ps1.
+# Clave correcta: "hide_results_when_search_is_empty" (la vieja
+# "hide_empty_search_results" no existe en Everything).
 # ==============================================================================
+if (Test-Paso '1.5') {
 Write-Log "" "INFO" "White"
 Write-Log "--- PASO 1.5: CONFIGURAR EVERYTHING ---" "INFO" "Yellow"
 
@@ -270,9 +323,9 @@ if (Test-Path $everythingIni) {
         $settings = @{
             "hide_results_when_search_is_empty" = 1   # pantalla en blanco hasta que el usuario escriba
             "exclude_system_files"              = 1   # ocultar archivos de sistema
-            "exclude_hidden_files"               = 1   # ocultar carpetas ocultas
-            "show_status_bar"                    = 0   # vista mas limpia sin barra de estado
-            "match_path"                         = 0
+            "exclude_hidden_files"              = 1   # ocultar carpetas ocultas
+            "show_status_bar"                   = 0   # vista mas limpia sin barra de estado
+            "match_path"                        = 0
         }
 
         $iniContent = Get-Content $everythingIni
@@ -309,7 +362,7 @@ if (Test-Path $everythingExe) {
         Write-Log "  [WARN] No se pudo instalar el servicio Everything: $_" "WARN" "Yellow"
     }
 
-    # Reiniciar Everything para que tome la config nueva (ConfigEverything.ps1 lo hacia asi)
+    # Reiniciar Everything para que tome la config nueva
     try {
         Start-Process $everythingExe
         Write-Log "  [OK] Everything reiniciado con la configuracion nueva." "INFO" "Green"
@@ -321,21 +374,35 @@ if (Test-Path $everythingExe) {
 }
 
 Write-Log "--- [PASO 1.5] Completado ---" "INFO" "Yellow"
+}
 
 # ==============================================================================
 # PASO 2 - VERIFICAR FALTANTES Y REINSTALAR (uno por uno con reintentos)
 # Este es el "control" que compara el config maestro contra lo efectivamente
 # instalado, y resuelve individualmente lo que el Paso 1 no haya logrado.
+# Si se corre solo (-Solo 2), recarga la lista del config maestro por su cuenta.
 # ==============================================================================
+if (Test-Paso '2') {
 Write-Log "" "INFO" "White"
 Write-Log "--- PASO 2: VERIFICAR PAQUETES FALTANTES ---" "INFO" "Yellow"
+
+if (@($expectedPackages).Count -eq 0) {
+    if (Test-Path $masterConfig) {
+        try {
+            [xml]$masterXml   = Get-Content $masterConfig -Encoding UTF8
+            $expectedPackages = @($masterXml.packages.package | ForEach-Object { $_.id })
+        } catch {
+            Write-Log "  [ERROR] No se pudo parsear el XML maestro: $_" "ERROR" "Red"
+        }
+    }
+}
 
 if ($expectedPackages.Count -eq 0) {
     Write-Log "  [SKIP] Sin lista de paquetes esperados. Saltando verificacion." "WARN" "Yellow"
 } else {
     $installedRaw      = Get-ChocoInstalled
     $installedPackages = $installedRaw | ForEach-Object { ($_ -split '\|')[0].Trim() }
-    $missing           = $expectedPackages | Where-Object { $_ -notin $installedPackages }
+    $missing           = @($expectedPackages | Where-Object { $_ -notin $installedPackages })
 
     if ($missing.Count -gt 0) {
         Write-Log "  [WARN] Paquetes faltantes: $($missing.Count)" "WARN" "Yellow"
@@ -364,11 +431,46 @@ if ($expectedPackages.Count -eq 0) {
 }
 
 Write-Log "--- [PASO 2] Completado ---" "INFO" "Yellow"
+}
+
+# ==============================================================================
+# PASO 2.5 - ASEGURAR GOOGLE CHROME (verifica chrome.exe, no solo choco list)
+# Si choco cree que esta instalado pero falta el exe, un install normal
+# responde "ya instalado" (codigo 0) sin hacer nada: por eso va directo con --force.
+# ==============================================================================
+if (Test-Paso '2.5') {
+Write-Log "" "INFO" "White"
+Write-Log "--- PASO 2.5: ASEGURAR GOOGLE CHROME ---" "INFO" "Yellow"
+
+if (Test-GoogleChrome) {
+    Write-Log "  [OK] chrome.exe presente." "INFO" "Green"
+} else {
+    Write-Log "  [WARN] chrome.exe no existe (aunque choco lo liste). Reinstalando con --force..." "WARN" "Yellow"
+    $chromeOK = $false
+    foreach ($flags in @(@('--force'), @('--ignore-checksums', '--force'))) {
+        Write-Log "    choco install googlechrome $($flags -join ' ')" "INFO" "Yellow"
+        choco install googlechrome @flags --limit-output --no-progress -y 2>&1 | Out-Null
+        $codigo = $LASTEXITCODE
+        Start-Sleep -Seconds 3
+        if (($codigo -in 0, 1641, 3010) -and (Test-GoogleChrome)) {
+            Write-Log "  [OK] Chrome instalado y verificado." "INFO" "Green"
+            $chromeOK = $true
+            break
+        }
+        Write-Log "    [WARN] Intento fallido (ExitCode: $codigo)." "WARN" "DarkYellow"
+    }
+    if (-not $chromeOK) {
+        Write-Log "  [ERROR] Chrome no quedo instalado. Requiere atencion manual." "ERROR" "Red"
+    }
+}
+
+Write-Log "--- [PASO 2.5] Completado ---" "INFO" "Yellow"
+}
 
 # ==============================================================================
 # PASO 3 - RENOMBRAR VOLUMEN C: CON MARCA Y CAPACIDAD DEL SSD
-# (era Paso 4 en v3 - renumerado al eliminar los antiguos Paso 3 y 3.5)
 # ==============================================================================
+if (Test-Paso '3') {
 Write-Log "" "INFO" "White"
 Write-Log "--- PASO 3: RENOMBRAR VOLUMEN C: (SSD) ---" "INFO" "Yellow"
 
@@ -450,11 +552,12 @@ try {
 }
 
 Write-Log "--- [PASO 3] Completado ---" "INFO" "Yellow"
+}
 
 # ==============================================================================
 # PASO 3.5 - DESCARGAR EmptyStandbyList.exe (requerido por AutoRAM-Monitor)
-# (era Paso 4.5 en v3)
 # ==============================================================================
+if (Test-Paso '3.5') {
 Write-Log "" "INFO" "White"
 Write-Log "--- PASO 3.5: EmptyStandbyList.exe para AutoRAM ---" "INFO" "Yellow"
 
@@ -477,22 +580,145 @@ if (-not (Test-Path $destino)) {
 }
 
 Write-Log "--- [PASO 3.5] Completado ---" "INFO" "Yellow"
+}
+# ==============================================================================
+# PASO 3.6 - ARCHIVO ESPANOL PARA NOTEPAD++ (movido desde el Script 1)
+# En el S1 Notepad++ todavia no esta instalado; lo instala el Paso 1 de este script.
+# ==============================================================================
+if (Test-Paso '3.6') {
+Write-Log "" "INFO" "White"
+Write-Log "--- PASO 3.6: ESPANOL NOTEPAD++ ---" "INFO" "Yellow"
+
+$nppSpanishOrigen = Join-Path $automaticoPath "Tools\spanish.xml"
+$nppDir           = "C:\Program Files\Notepad++"
+$nppLocalization  = Join-Path $nppDir "localization"
+
+if (-not (Test-Path $nppSpanishOrigen)) {
+    Write-Log "  [WARN] spanish.xml no encontrado en: $nppSpanishOrigen" "WARN" "Yellow"
+} elseif (-not (Test-Path $nppDir)) {
+    Write-Log "  [WARN] Notepad++ no esta instalado. Saltando copia de spanish.xml." "WARN" "Yellow"
+} else {
+    try {
+        Stop-Process -Name "notepad++" -Force -ErrorAction SilentlyContinue
+        if (-not (Test-Path $nppLocalization)) { New-Item -ItemType Directory -Path $nppLocalization -Force | Out-Null }
+        Copy-Item $nppSpanishOrigen -Destination $nppLocalization -Force
+        Write-Log "  [OK] spanish.xml copiado a: $nppLocalization" "INFO" "Green"
+    } catch {
+        Write-Log "  [ERROR] No se pudo copiar spanish.xml: $_" "ERROR" "Red"
+    }
+}
+
+Write-Log "--- [PASO 3.6] Completado ---" "INFO" "Yellow"
+}
+
+# ==============================================================================
+# PASO 4 - MACROS TINYTASK (barra de tareas)
+# Va al final para no competir por foco con Everything/instaladores.
+# Ejecutables compilados desde TinyTask, en C:\...\Automatico\Tools\TiniTask
+# ==============================================================================
+if (Test-Paso '4') {
+Write-Log "" "INFO" "White"
+Write-Log "--- PASO 4: MACROS TINYTASK ---" "INFO" "Yellow"
+
+$tiniPath   = Join-Path $automaticoPath "Tools\TiniTask"
+$estadoFile = Join-Path $tiniPath "MacrosHechas.txt"
+$timeoutSeg = 180
+
+$macros = @(
+    @{ Exe = 'DesanclarTaskBar.exe';     Req = '' }
+    @{ Exe = '1FileExplorerTaskBar.exe'; Req = '' }
+    @{ Exe = '2GoogleTaskBar.exe';       Req = 'Chrome' }
+    @{ Exe = '3PanelControlTaskBar.exe'; Req = '' }
+    @{ Exe = '4ExcelTaskBar.exe';        Req = 'Office' }
+    @{ Exe = '5WordTaskBar.exe';         Req = 'Office' }
+)
+
+if (-not (Test-Path -LiteralPath $tiniPath -PathType Container)) {
+    Write-Log "  [ERROR] No existe la carpeta de macros: $tiniPath" "ERROR" "Red"
+} else {
+    $hayChrome = Test-GoogleChrome
+    $hayOffice = Test-Office2021
+    $hechas    = if (Test-Path -LiteralPath $estadoFile) { @(Get-Content -LiteralPath $estadoFile) } else { @() }
+
+    $aEjecutar = @()
+    foreach ($m in $macros) {
+        if ($m.Exe -in $hechas) {
+            Write-Log "  [SKIP] $($m.Exe): ya se ejecuto antes." "INFO" "Gray"; continue
+        }
+        if ($m.Req -eq 'Chrome' -and -not $hayChrome) {
+            Write-Log "  [WARN] $($m.Exe) omitida: no hay Chrome." "WARN" "Yellow"; continue
+        }
+        if ($m.Req -eq 'Office' -and -not $hayOffice) {
+            Write-Log "  [WARN] $($m.Exe) omitida: no se detecto Office 2021." "WARN" "Yellow"; continue
+        }
+        $aEjecutar += $m.Exe
+    }
+
+    $faltan = @($aEjecutar | Where-Object { -not (Test-Path -LiteralPath (Join-Path $tiniPath $_) -PathType Leaf) })
+
+    if ($faltan.Count -gt 0) {
+        Write-Log "  [ERROR] Faltan ejecutables; no se corre ninguna macro:" "ERROR" "Red"
+        $faltan | ForEach-Object { Write-Log "    - $_" "ERROR" "Red" }
+    } elseif ($aEjecutar.Count -eq 0) {
+        Write-Log "  [i] No hay macros pendientes." "INFO" "Gray"
+    } else {
+        Get-ChildItem -LiteralPath $tiniPath -Filter *.exe | Unblock-File -ErrorAction SilentlyContinue
+
+        Write-Log "  *** NO TOQUES EL MOUSE NI EL TECLADO mientras corren las macros ***" "WARN" "Red"
+        for ($s = 10; $s -gt 0; $s--) {
+            Write-Host "  Arrancan en $s ..." -ForegroundColor Red
+            Start-Sleep -Seconds 1
+        }
+
+        $fallo = $false
+        foreach ($exe in $aEjecutar) {
+            Write-Log "  Ejecutando: $exe" "INFO" "Yellow"
+            try {
+                $p = Start-Process -FilePath (Join-Path $tiniPath $exe) -PassThru
+                if (-not $p.WaitForExit($timeoutSeg * 1000)) {
+                    Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+                    throw "supero el limite de $timeoutSeg segundos"
+                }
+                if ($p.ExitCode -ne 0) { throw "codigo de salida $($p.ExitCode)" }
+                Add-Content -LiteralPath $estadoFile -Value $exe -Encoding UTF8
+                Write-Log "  [OK] $exe finalizo." "INFO" "Green"
+            } catch {
+                Write-Log "  [ERROR] Fallo '$exe': $($_.Exception.Message). Secuencia interrumpida." "ERROR" "Red"
+                $fallo = $true
+                break
+            }
+            Start-Sleep -Seconds 2
+        }
+
+        if (-not $fallo) {
+            Write-Log "  [OK] Macros terminadas (finalizar el proceso no garantiza el resultado visual: mira la barra)." "INFO" "Green"
+        }
+    }
+}
+
+Write-Log "--- [PASO 4] Completado ---" "INFO" "Yellow"
+}
 
 # ==============================================================================
 # FIN DEL SCRIPT
 # S5 queda descartado (ver Script 1) - no hay llamado a ningun script mas.
-# Reinicio automatico: el rename de equipo (S2) y los cambios de DISM /
-# Memory Compression (S3) necesitan un reboot para terminar de aplicarse.
+# Reinicio automatico solo en corrida completa: el rename de equipo (S2) y los
+# cambios de DISM / Memory Compression (S3) necesitan un reboot para aplicarse.
+# Con -Solo no se reinicia.
 # ==============================================================================
 Write-Log "" "INFO" "White"
 Write-Log "=============================================" "INFO" "Magenta"
-Write-Log "  4ExtraeNew-InstallAppsDesktop-Claude-v4.ps1  FIN" "INFO" "Green"
+Write-Log "  4InstallAppsDesktop-Claude.ps1 (v7)  FIN" "INFO" "Green"
 Write-Log "=============================================" "INFO" "Magenta"
 Write-Log "Log       : $global:LogFile" "INFO" "Cyan"
 Write-Log "" "INFO" "White"
-Write-Log "DESPLIEGUE COMPLETO. Reiniciando equipo en 5 segundos..." "INFO" "Green"
-Write-Log "(rename de equipo, DISM y Memory Compression necesitan este reinicio)" "INFO" "Gray"
-Write-Log "" "INFO" "White"
 
-Start-Sleep -Seconds 5
-Restart-Computer -Force
+if ($Solo.Count -eq 0) {
+    Write-Log "DESPLIEGUE COMPLETO. Reiniciando equipo en 5 segundos..." "INFO" "Green"
+    Write-Log "(rename de equipo, DISM y Memory Compression necesitan este reinicio)" "INFO" "Gray"
+    Write-Log "" "INFO" "White"
+    Start-Sleep -Seconds 5
+    Restart-Computer -Force
+} else {
+    Write-Log "Modo -Solo ($($Solo -join ', ')): sin reinicio automatico." "INFO" "Cyan"
+}
