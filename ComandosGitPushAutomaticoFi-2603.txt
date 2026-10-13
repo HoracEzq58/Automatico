@@ -91,6 +91,9 @@ git rm --cached 'Tu-pc-va-a-volar/~$TIMIZA TODO.docx'
 git rm --cached 'Tu-pc-va-a-volar/~$ntexto AI.docx'
 git rm --cached 'Tu-pc-va-a-volar/~WRL0003.tmp'
 
+git commit -m "Eliminar archivos temporales de Word y actualizar .gitignore"
+git push origin HEAD:main
+
 git status
 
 ****************************************************************************************
