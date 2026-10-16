@@ -36,4 +36,11 @@ foreach ($Ruta in $RutasA_Limpiar) {
     }
 }
 
+# 5. Carpeta de proyectos de ManyCam (ruta fija del usuario)
+$CarpetaProyectos = "C:\Users\pomelo\Documents\ManyCam Projects"
+if (Test-Path $CarpetaProyectos) {
+    Write-Host "Eliminando carpeta de proyectos: $CarpetaProyectos" -ForegroundColor Cyan
+    Remove-Item -Path $CarpetaProyectos -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 Write-Host "`n¡Limpieza completa de ManyCam, AutoHotkey y WebCamoid finalizada!" -ForegroundColor Green
