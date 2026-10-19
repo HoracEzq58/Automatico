@@ -43,4 +43,23 @@ if (Test-Path $CarpetaProyectos) {
     Remove-Item -Path $CarpetaProyectos -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+# 6. Accesos directos en el escritorio (publico + usuario actual, incluso si esta en OneDrive)
+$Escritorios = @(
+    "C:\Users\Public\Desktop",
+    [Environment]::GetFolderPath('Desktop'),
+    "C:\Users\pomelo\Desktop"
+) | Select-Object -Unique
+
+foreach ($Esc in $Escritorios) {
+    if (Test-Path $Esc) {
+        foreach ($Objetivo in $Objetivos) {
+            Get-ChildItem -Path $Esc -Filter "$Objetivo.lnk" -ErrorAction SilentlyContinue |
+            ForEach-Object {
+                Write-Host "Eliminando acceso directo: $($_.FullName)" -ForegroundColor Cyan
+                Remove-Item -Path $_.FullName -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+}
+
 Write-Host "`n¡Limpieza completa de ManyCam, AutoHotkey y WebCamoid finalizada!" -ForegroundColor Green

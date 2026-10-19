@@ -138,9 +138,6 @@ if ([string]::IsNullOrWhiteSpace($nuevoUsuario)) {
 
 $respuestas = @{
     NuevoUsuario = $nuevoUsuario.Trim()
-
-$respuestas = @{
-    NuevoUsuario = $nuevoUsuario.Trim()
     FechaPedido  = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
 }
 

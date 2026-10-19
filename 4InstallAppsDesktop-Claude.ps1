@@ -34,8 +34,8 @@
 #
 #  [PASO 3.6 NUEVO] Mudado del S1, Notepad++ ahora se instala desde este S4
 #
-#  [PASO 4 NUEVO] Macros TinyTask (ex MacrosTini-v3.ps1) integradas, al final
-#           para no competir por foco con Everything/instaladores:
+#        4)	Anclar barra de tareas (layout XML) -> reinicio (solo si se corre completo)
+#			- Anclado por layout XML (ya no hay macros TinyTask)
 #           - Sin exit ni ErrorActionPreference Stop: si falla, loguea y sigue.
 #           - WaitForExit en vez de Wait-Process (evita falso timeout cuando
 #             la macro termina antes de llegar a esperar).
@@ -612,89 +612,98 @@ Write-Log "--- [PASO 3.6] Completado ---" "INFO" "Yellow"
 }
 
 # ==============================================================================
-# PASO 4 - MACROS TINYTASK (barra de tareas)
-# Va al final para no competir por foco con Everything/instaladores.
-# Ejecutables compilados desde TinyTask, en C:\...\Automatico\Tools\TiniTask
+# PASO 4 - ANCLAR BARRA DE TAREAS (layout XML, sin macros ni GUI)
+# Orden: Explorador, Chrome, Panel de control, Excel, Word. Desancla todo lo demas.
+# Cada app se ancla SOLO si esta realmente instalada (chrome.exe / Office 2021).
 # ==============================================================================
 if (Test-Paso '4') {
 Write-Log "" "INFO" "White"
-Write-Log "--- PASO 4: MACROS TINYTASK ---" "INFO" "Yellow"
+Write-Log "--- PASO 4: ANCLAR BARRA DE TAREAS ---" "INFO" "Yellow"
 
-$tiniPath   = Join-Path $automaticoPath "Tools\TiniTask"
-$estadoFile = Join-Path $tiniPath "MacrosHechas.txt"
-$timeoutSeg = 180
+$progs  = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs"
+$xml    = Join-Path $global:LogPath "TaskbarLayout.xml"
+$polKey = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer'
+$items  = @('<taskbar:DesktopApp DesktopApplicationID="Microsoft.Windows.Explorer" />')
+$ws     = New-Object -ComObject WScript.Shell
 
-$macros = @(
-    @{ Exe = 'DesanclarTaskBar.exe';     Req = '' }
-    @{ Exe = '1FileExplorerTaskBar.exe'; Req = '' }
-    @{ Exe = '2GoogleTaskBar.exe';       Req = 'Chrome' }
-    @{ Exe = '3PanelControlTaskBar.exe'; Req = '' }
-    @{ Exe = '4ExcelTaskBar.exe';        Req = 'Office' }
-    @{ Exe = '5WordTaskBar.exe';         Req = 'Office' }
-)
+try {
+    # --- Chrome: solo si chrome.exe existe; si falta el .lnk, se crea ---
+    $chromeExe = @(
+        "$env:ProgramFiles\Google\Chrome\Application\chrome.exe"
+        "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+        "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+    ) | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
 
-if (-not (Test-Path -LiteralPath $tiniPath -PathType Container)) {
-    Write-Log "  [ERROR] No existe la carpeta de macros: $tiniPath" "ERROR" "Red"
-} else {
-    $hayChrome = Test-GoogleChrome
-    $hayOffice = Test-Office2021
-    $hechas    = if (Test-Path -LiteralPath $estadoFile) { @(Get-Content -LiteralPath $estadoFile) } else { @() }
-
-    $aEjecutar = @()
-    foreach ($m in $macros) {
-        if ($m.Exe -in $hechas) {
-            Write-Log "  [SKIP] $($m.Exe): ya se ejecuto antes." "INFO" "Gray"; continue
+    if ($chromeExe) {
+        $lnk = Join-Path $progs "Google Chrome.lnk"
+        if (-not (Test-Path $lnk)) {
+            $s = $ws.CreateShortcut($lnk); $s.TargetPath = $chromeExe; $s.Save()
         }
-        if ($m.Req -eq 'Chrome' -and -not $hayChrome) {
-            Write-Log "  [WARN] $($m.Exe) omitida: no hay Chrome." "WARN" "Yellow"; continue
-        }
-        if ($m.Req -eq 'Office' -and -not $hayOffice) {
-            Write-Log "  [WARN] $($m.Exe) omitida: no se detecto Office 2021." "WARN" "Yellow"; continue
-        }
-        $aEjecutar += $m.Exe
-    }
-
-    $faltan = @($aEjecutar | Where-Object { -not (Test-Path -LiteralPath (Join-Path $tiniPath $_) -PathType Leaf) })
-
-    if ($faltan.Count -gt 0) {
-        Write-Log "  [ERROR] Faltan ejecutables; no se corre ninguna macro:" "ERROR" "Red"
-        $faltan | ForEach-Object { Write-Log "    - $_" "ERROR" "Red" }
-    } elseif ($aEjecutar.Count -eq 0) {
-        Write-Log "  [i] No hay macros pendientes." "INFO" "Gray"
+        $items += "<taskbar:DesktopApp DesktopApplicationLinkPath=`"$lnk`" />"
+        Write-Log "  [OK] Chrome se ancla." "INFO" "Green"
     } else {
-        Get-ChildItem -LiteralPath $tiniPath -Filter *.exe | Unblock-File -ErrorAction SilentlyContinue
-
-        Write-Log "  *** NO TOQUES EL MOUSE NI EL TECLADO mientras corren las macros ***" "WARN" "Red"
-        for ($s = 10; $s -gt 0; $s--) {
-            Write-Host "  Arrancan en $s ..." -ForegroundColor Red
-            Start-Sleep -Seconds 1
-        }
-
-        $fallo = $false
-        foreach ($exe in $aEjecutar) {
-            Write-Log "  Ejecutando: $exe" "INFO" "Yellow"
-            try {
-                $p = Start-Process -FilePath (Join-Path $tiniPath $exe) -PassThru
-                if (-not $p.WaitForExit($timeoutSeg * 1000)) {
-                    Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-                    throw "supero el limite de $timeoutSeg segundos"
-                }
-                if ($p.ExitCode -ne 0) { throw "codigo de salida $($p.ExitCode)" }
-                Add-Content -LiteralPath $estadoFile -Value $exe -Encoding UTF8
-                Write-Log "  [OK] $exe finalizo." "INFO" "Green"
-            } catch {
-                Write-Log "  [ERROR] Fallo '$exe': $($_.Exception.Message). Secuencia interrumpida." "ERROR" "Red"
-                $fallo = $true
-                break
-            }
-            Start-Sleep -Seconds 2
-        }
-
-        if (-not $fallo) {
-            Write-Log "  [OK] Macros terminadas (finalizar el proceso no garantiza el resultado visual: mira la barra)." "INFO" "Green"
-        }
+        Write-Log "  [WARN] Chrome no esta instalado: no se ancla." "WARN" "Yellow"
     }
+
+    # --- Panel de control: siempre (el .lnk se crea) ---
+    $lnk = Join-Path $progs "Panel de control.lnk"
+    $s = $ws.CreateShortcut($lnk); $s.TargetPath = "$env:windir\System32\control.exe"; $s.Save()
+    $items += "<taskbar:DesktopApp DesktopApplicationLinkPath=`"$lnk`" />"
+
+    # --- Excel y Word: solo si hay Office 2021 y existe el .lnk ---
+    if (Test-Office2021) {
+        foreach ($n in 'Excel','Word') {
+            $lnk = Join-Path $progs "$n.lnk"
+            if (Test-Path $lnk) {
+                $items += "<taskbar:DesktopApp DesktopApplicationLinkPath=`"$lnk`" />"
+                Write-Log "  [OK] $n se ancla." "INFO" "Green"
+            } else {
+                Write-Log "  [WARN] No existe $lnk: $n no se ancla." "WARN" "Yellow"
+            }
+        }
+    } else {
+        Write-Log "  [WARN] Office 2021 no detectado: Excel y Word no se anclan." "WARN" "Yellow"
+    }
+
+    # --- XML ---
+@"
+<?xml version="1.0" encoding="utf-8"?>
+<LayoutModificationTemplate
+    xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification"
+    xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout"
+    xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout"
+    xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout"
+    Version="1">
+  <CustomTaskbarLayoutCollection PinListPlacement="Replace">
+    <defaultlayout:TaskbarLayout>
+      <taskbar:TaskbarPinList>
+        $($items -join "`r`n        ")
+      </taskbar:TaskbarPinList>
+    </defaultlayout:TaskbarLayout>
+  </CustomTaskbarLayoutCollection>
+</LayoutModificationTemplate>
+"@ | Set-Content -Path $xml -Encoding UTF8
+
+    # --- Aplicar politica + reiniciar explorer ---
+    New-Item $polKey -Force | Out-Null
+    Set-ItemProperty $polKey -Name LockedStartLayout -Value 1 -Type DWord
+    Set-ItemProperty $polKey -Name StartLayoutFile  -Value $xml -Type ExpandString
+    Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 10
+} catch {
+    Write-Log "  [ERROR] Fallo armando el layout de la barra: $($_.Exception.Message)" "ERROR" "Red"
+} finally {
+    # Siempre destrabar, aunque haya fallado algo
+    Set-ItemProperty $polKey -Name LockedStartLayout -Value 0 -ErrorAction SilentlyContinue
+    Remove-ItemProperty $polKey -Name StartLayoutFile -ErrorAction SilentlyContinue
+    # Sacar el tilde de "Bloquear la barra de tareas"
+    Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name TaskbarSizeMove -Value 1 -Type DWord -ErrorAction SilentlyContinue
 }
+
+# Segundo reinicio de explorer + asegurar que vuelva (evita la pantalla negra)
+Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 4
+if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) { Start-Process explorer.exe }
 
 Write-Log "--- [PASO 4] Completado ---" "INFO" "Yellow"
 }
